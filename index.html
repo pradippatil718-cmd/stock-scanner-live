@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>स्टॉक स्कॅनर</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0B1220">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Marathi&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B1220; --bg-elev:#0F1A2E; --card:#141F38; --card2:#182548;
+    --border:#243252; --text:#E9EDF6; --text-dim:#8C9AB8; --text-dim2:#5E6C8C;
+    --accent-teal:#2FD9C4; --accent-gold:#E7B94E;
+    --bull:#33C481; --bull-bg:rgba(51,196,129,.12);
+    --bear:#E5586B; --bear-bg:rgba(229,88,107,.12);
+    --warn:#E7B94E; --warn-bg:rgba(231,185,78,.12);
+    --radius:16px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;
+    min-height:100vh; padding-bottom:78px;
+  }
+  .mr{font-family:'Tiro Devanagari Marathi', serif;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+  #app{max-width:480px; margin:0 auto; min-height:100vh; position:relative; background:
+    radial-gradient(circle at 20% 0%, rgba(47,217,196,.06), transparent 40%),
+    radial-gradient(circle at 90% 10%, rgba(231,185,78,.05), transparent 35%), var(--bg);
+  }
+  /* Top bar */
+  .topbar{padding:18px 16px 10px; position:sticky; top:0; z-index:20; backdrop-filter:blur(10px); background:rgba(11,18,32,.85); border-bottom:1px solid var(--border);}
+  .topbar h1{font-family:'Tiro Devanagari Marathi',serif; font-size:20px; font-weight:400; letter-spacing:.2px;}
+  .topbar .sub{font-size:11px; color:var(--text-dim2); margin-top:2px;}
+  .demo-banner{
+    margin:8px 16px 0; padding:8px 12px; border-radius:10px; font-size:11.5px;
+    background:var(--warn-bg); color:var(--warn); border:1px solid rgba(231,185,78,.35);
+    display:flex; gap:6px; align-items:center;
+  }
+  .disclaimer{
+    margin:10px 16px 4px; padding:12px 14px; border-radius:12px; font-size:12px; line-height:1.55;
+    background:var(--card); border:1px solid var(--border); color:var(--text-dim);
+  }
+  main{padding:14px 16px 24px;}
+  .section-title{font-family:'Tiro Devanagari Marathi',serif; font-size:16px; color:var(--text); margin:20px 0 10px; display:flex; align-items:center; justify-content:space-between;}
+  .section-title span.count{font-family:'Inter'; font-size:11px; color:var(--text-dim2); font-weight:600;}
+
+  /* Cards / grid */
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .idx-card{background:linear-gradient(155deg, var(--card2), var(--card)); border:1px solid var(--border); border-radius:var(--radius); padding:14px;}
+  .idx-card .name{font-size:12px; color:var(--text-dim); font-weight:600; letter-spacing:.3px;}
+  .idx-card .price{font-family:'JetBrains Mono'; font-size:20px; font-weight:600; margin-top:4px;}
+  .chg{font-size:12.5px; font-weight:600; margin-top:3px; display:inline-flex; align-items:center; gap:3px;}
+  .chg.up{color:var(--bull);} .chg.down{color:var(--bear);}
+  .trend-strip{margin-top:16px; border-radius:var(--radius); padding:14px; border:1px solid var(--border);}
+  .trend-strip.bullish{background:linear-gradient(90deg, var(--bull-bg), transparent);}
+  .trend-strip.bearish{background:linear-gradient(90deg, var(--bear-bg), transparent);}
+  .trend-strip.sideways{background:linear-gradient(90deg, var(--warn-bg), transparent);}
+  .trend-strip .t1{font-family:'Tiro Devanagari Marathi'; font-size:15px;}
+  .trend-strip .t2{font-size:11.5px; color:var(--text-dim); margin-top:4px;}
+
+  .breadth-row{display:flex; gap:10px; margin-top:10px;}
+  .breadth-box{flex:1; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 12px; text-align:center;}
+  .breadth-box .n{font-family:'JetBrains Mono'; font-size:18px; font-weight:700;}
+  .breadth-box.b .n{color:var(--bull);} .breadth-box.r .n{color:var(--bear);}
+  .breadth-box .l{font-size:10.5px; color:var(--text-dim); margin-top:2px;}
+
+  /* score ring */
+  .ring-wrap{position:relative; width:44px; height:44px; flex-shrink:0;}
+  .ring-wrap svg{transform:rotate(-90deg);}
+  .ring-wrap .val{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono'; font-size:12px; font-weight:700;}
+
+  /* stock card */
+  .stock-card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:13px; margin-bottom:9px; display:flex; gap:12px; align-items:center; cursor:pointer; transition:border-color .15s;}
+  .stock-card:active{border-color:var(--accent-teal);}
+  .stock-card .mid{flex:1; min-width:0;}
+  .stock-card .sym{font-weight:700; font-size:14.5px;}
+  .stock-card .sec{font-size:10.5px; color:var(--text-dim2); margin-top:1px;}
+  .stock-card .metaRow{display:flex; gap:10px; margin-top:6px; font-size:11px; color:var(--text-dim);}
+  .stock-card .right{text-align:right; flex-shrink:0;}
+  .stock-card .price{font-family:'JetBrains Mono'; font-size:14px; font-weight:600;}
+  .badge{display:inline-block; font-size:9.5px; font-weight:700; padding:3px 7px; border-radius:20px; margin-top:5px; letter-spacing:.3px;}
+  .badge.strong{background:var(--bull-bg); color:var(--bull);}
+  .badge.good{background:rgba(47,217,196,.13); color:var(--accent-teal);}
+  .badge.watch{background:var(--warn-bg); color:var(--warn);}
+  .badge.weak{background:rgba(140,154,184,.14); color:var(--text-dim);}
+  .badge.avoid{background:var(--bear-bg); color:var(--bear);}
+
+  .chip{background:var(--card2); border:1px solid var(--border); font-size:11.5px; padding:5px 10px; border-radius:20px; color:var(--text-dim); white-space:nowrap;}
+  .chip.active{background:var(--accent-teal); color:#04211d; border-color:var(--accent-teal); font-weight:700;}
+  .chips-row{display:flex; gap:7px; overflow-x:auto; padding-bottom:4px; margin-bottom:4px;}
+  .chips-row::-webkit-scrollbar{display:none;}
+
+  .sector-row{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:12.5px;}
+  .sector-row:last-child{border-bottom:none;}
+  .sector-bar{height:5px; border-radius:3px; background:var(--card2); width:90px; overflow:hidden;}
+  .sector-bar > div{height:100%; border-radius:3px;}
+
+  .watch-empty{text-align:center; padding:30px 10px; color:var(--text-dim2); font-size:13px;}
+  .watch-empty .mr{font-size:14px; display:block; margin-bottom:4px; color:var(--text-dim);}
+
+  /* bottom nav */
+  .bottomnav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:rgba(15,26,46,.96); backdrop-filter:blur(14px); border-top:1px solid var(--border); display:flex; z-index:30;}
+  .navbtn{flex:1; padding:10px 0 12px; display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none; color:var(--text-dim2); font-family:'Tiro Devanagari Marathi'; font-size:11px; cursor:pointer;}
+  .navbtn.active{color:var(--accent-teal);}
+  .navbtn svg{width:21px; height:21px;}
+
+  /* detail page */
+  .backbtn{display:inline-flex; align-items:center; gap:6px; color:var(--text-dim); font-size:13px; margin-bottom:10px; cursor:pointer; background:none; border:none;}
+  .detail-head{display:flex; justify-content:space-between; align-items:flex-start;}
+  .detail-head h2{font-size:22px; font-weight:800;}
+  .detail-head .sec{color:var(--text-dim); font-size:12px; margin-top:2px;}
+  .detail-price{font-family:'JetBrains Mono'; font-size:26px; font-weight:700; margin-top:10px;}
+  .verdict{margin-top:14px; padding:13px 14px; border-radius:14px; border:1px solid; }
+  .verdict.buy{background:var(--bull-bg); border-color:rgba(51,196,129,.4);}
+  .verdict.notrade{background:var(--bear-bg); border-color:rgba(229,88,107,.4);}
+  .verdict .vtitle{font-weight:800; font-size:14px;}
+  .verdict.buy .vtitle{color:var(--bull);} .verdict.notrade .vtitle{color:var(--bear);}
+  .verdict .vsub{font-size:11.5px; color:var(--text-dim); margin-top:3px;}
+
+  .confirm-list{margin-top:10px; display:flex; flex-direction:column; gap:6px;}
+  .confirm-item{display:flex; align-items:center; gap:8px; font-size:12.5px; padding:8px 10px; border-radius:10px; background:var(--card);}
+  .confirm-item .dot{width:16px; height:16px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;}
+  .dot.yes{background:var(--bull); color:#04211d;}
+  .dot.no{background:var(--bear); color:#2a0a0e;}
+
+  .statgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px;}
+  .stat{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 12px;}
+  .stat .l{font-size:10px; color:var(--text-dim2); text-transform:uppercase; letter-spacing:.4px;}
+  .stat .v{font-family:'JetBrains Mono'; font-size:14px; font-weight:600; margin-top:3px;}
+
+  .card-box{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:15px; margin-top:14px;}
+  .card-box h3{font-family:'Tiro Devanagari Marathi'; font-size:14.5px; margin-bottom:10px;}
+  .etr-row{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px dashed var(--border); font-size:13px;}
+  .etr-row:last-child{border-bottom:none;}
+  .etr-row .l{color:var(--text-dim);}
+  .etr-row .v{font-family:'JetBrains Mono'; font-weight:700;}
+  .etr-row .v.g{color:var(--bull);} .etr-row .v.r{color:var(--bear);}
+
+  .scorebreak{margin-top:10px; display:flex; flex-direction:column; gap:7px;}
+  .sb-row{display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:7px 9px; border-radius:9px;}
+  .sb-row.on{background:rgba(51,196,129,.09);}
+  .sb-row.off{background:rgba(229,88,107,.06);}
+  .sb-row .pts{font-family:'JetBrains Mono'; font-weight:700;}
+  .sb-row.on .pts{color:var(--bull);} .sb-row.off .pts{color:var(--text-dim2);}
+
+  .explain-box{margin-top:14px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:15px; font-family:'Tiro Devanagari Marathi'; font-size:13.5px; line-height:2; color:var(--text);}
+  .explain-box b{color:var(--accent-teal);}
+
+  .addwatch{width:100%; margin-top:14px; padding:13px; border-radius:12px; border:1px solid var(--accent-teal); background:transparent; color:var(--accent-teal); font-weight:700; font-size:13.5px; font-family:'Inter'; cursor:pointer;}
+  .addwatch.added{background:var(--accent-teal); color:#04211d;}
+
+  .chartbox{margin-top:14px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:10px;}
+  .legend{display:flex; gap:12px; font-size:10.5px; padding:6px 4px 0; color:var(--text-dim);}
+  .legend span{display:inline-flex; align-items:center; gap:4px;}
+  .legend i{width:8px; height:8px; border-radius:2px; display:inline-block;}
+
+  .hidden{display:none !important;}
+  ::-webkit-scrollbar{width:0; height:0;}
+
+  /* Phase 2: risk calc / paper trade / backtest */
+  .subtabs{display:flex; gap:8px; margin:10px 0 4px;}
+  .subtab{flex:1; text-align:center; padding:9px 0; border-radius:10px; background:var(--card); border:1px solid var(--border); font-size:12.5px; font-family:'Tiro Devanagari Marathi'; color:var(--text-dim); cursor:pointer;}
+  .subtab.active{background:rgba(47,217,196,.12); border-color:var(--accent-teal); color:var(--accent-teal); font-weight:700;}
+
+  .field{margin-bottom:10px;}
+  .field label{display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px; font-family:'Tiro Devanagari Marathi';}
+  .field input, .field select{width:100%; background:var(--bg-elev); border:1px solid var(--border); color:var(--text); padding:10px 11px; border-radius:10px; font-family:'JetBrains Mono'; font-size:13.5px;}
+  .field select{font-family:'Inter';}
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+
+  .risk-preview{background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin:10px 0;}
+  .risk-preview .rp-row{display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0;}
+  .risk-preview .rp-row .v{font-family:'JetBrains Mono'; font-weight:700; color:var(--accent-gold);}
+  .risk-preview .rp-row.hi .v{color:var(--bull); font-size:15px;}
+
+  .btn-primary{width:100%; padding:13px; border-radius:12px; border:none; background:var(--accent-teal); color:#04211d; font-weight:800; font-size:13.5px; font-family:'Inter'; cursor:pointer;}
+  .btn-outline{width:100%; padding:12px; border-radius:12px; border:1px solid var(--border); background:transparent; color:var(--text-dim); font-weight:600; font-size:12.5px; font-family:'Inter'; cursor:pointer; margin-top:8px;}
+
+  .trade-card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:9px;}
+  .trade-card .th{display:flex; justify-content:space-between; align-items:center;}
+  .trade-card .th .sym{font-weight:700; font-size:14px;}
+  .trade-status{font-size:9.5px; font-weight:800; padding:3px 8px; border-radius:20px; letter-spacing:.3px;}
+  .trade-status.open{background:var(--warn-bg); color:var(--warn);}
+  .trade-status.win{background:var(--bull-bg); color:var(--bull);}
+  .trade-status.loss{background:var(--bear-bg); color:var(--bear);}
+  .trade-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:9px; font-size:11.5px;}
+  .trade-grid .tl{color:var(--text-dim2); font-size:9.5px; text-transform:uppercase;}
+  .trade-grid .tv{font-family:'JetBrains Mono'; font-weight:600; margin-top:1px;}
+  .trade-actions{display:flex; gap:8px; margin-top:10px;}
+  .trade-actions button{flex:1; padding:8px 0; border-radius:9px; border:1px solid var(--border); background:var(--bg-elev); color:var(--text-dim); font-size:11.5px; cursor:pointer; font-family:'Tiro Devanagari Marathi';}
+  .trade-actions button.win-btn{border-color:var(--bull); color:var(--bull);}
+  .trade-actions button.loss-btn{border-color:var(--bear); color:var(--bear);}
+
+  .overfit-warn{background:var(--bear-bg); border:1px solid rgba(229,88,107,.35); border-radius:12px; padding:12px 14px; font-size:11.5px; line-height:1.6; color:var(--bear); margin:10px 0;}
+  .bt-statgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;}
+  .bt-stat{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 12px;}
+  .bt-stat .l{font-size:10px; color:var(--text-dim2); text-transform:uppercase;}
+  .bt-stat .v{font-family:'JetBrains Mono'; font-size:15px; font-weight:700; margin-top:3px;}
+  .bt-stat .v.g{color:var(--bull);} .bt-stat .v.r{color:var(--bear);}
+
+  .summary-row{display:flex; gap:10px; margin-top:12px;}
+  .summary-box{flex:1; text-align:center; background:var(--card2); border-radius:12px; padding:10px;}
+  .summary-box .n{font-family:'JetBrains Mono'; font-size:17px; font-weight:800;}
+  .summary-box .l{font-size:10px; color:var(--text-dim); margin-top:2px;}
+
+  /* Phase 3: live data status bar / login / loading / errors */
+  #status-bar{padding:0 16px;}
+  .status-bar-inner{margin-top:8px; padding:9px 12px; border-radius:12px; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px;}
+  .status-bar-inner.live{background:rgba(51,196,129,.1); border:1px solid rgba(51,196,129,.35); color:var(--bull);}
+  .status-bar-inner.closed{background:var(--warn-bg); border:1px solid rgba(231,185,78,.35); color:var(--warn);}
+  .status-bar-inner.error{background:var(--bear-bg); border:1px solid rgba(229,88,107,.35); color:var(--bear);}
+  .status-left{display:flex; align-items:center; gap:6px;}
+  .dotpulse{width:7px; height:7px; border-radius:50%; background:currentColor; animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
+  .status-actions{display:flex; gap:6px; align-items:center;}
+  .status-actions select, .status-actions button{
+    background:var(--card2); color:var(--text); border:1px solid var(--border); border-radius:8px;
+    font-size:10.5px; padding:5px 7px; font-family:'Inter'; cursor:pointer;
+  }
+  .refresh-btn{display:flex; align-items:center; gap:4px;}
+
+  .login-screen{margin-top:60px; text-align:center; padding:0 10px;}
+  .login-screen .icon{font-size:44px;}
+  .login-screen h2{font-family:'Tiro Devanagari Marathi'; font-size:18px; margin:14px 0 8px;}
+  .login-screen p{font-size:12.5px; color:var(--text-dim); line-height:1.7; max-width:340px; margin:0 auto 20px;}
+  .login-btn{display:inline-block; padding:14px 26px; border-radius:14px; background:var(--accent-teal); color:#04211d; font-weight:800; font-size:14px; text-decoration:none; font-family:'Inter';}
+  .login-note{margin-top:16px; font-size:10.5px; color:var(--text-dim2); max-width:320px; margin-left:auto; margin-right:auto; line-height:1.6;}
+
+  .loading-screen{text-align:center; padding:70px 20px; color:var(--text-dim);}
+  .spinner{width:34px; height:34px; border:3px solid var(--border); border-top-color:var(--accent-teal); border-radius:50%; margin:0 auto 16px; animation:spin 0.9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-screen .mr{font-size:13.5px;}
+  .loading-screen .sub2{font-size:11px; color:var(--text-dim2); margin-top:6px;}
+
+  .error-screen{margin-top:40px; text-align:center; padding:0 16px;}
+  .error-screen .icon{font-size:40px;}
+  .error-screen h3{font-family:'Tiro Devanagari Marathi'; font-size:15.5px; margin:12px 0 8px; color:var(--bear);}
+  .error-screen p{font-size:12.5px; color:var(--text-dim); line-height:1.7;}
+  .retry-btn{margin-top:16px; padding:11px 22px; border-radius:12px; border:1px solid var(--accent-teal); background:transparent; color:var(--accent-teal); font-weight:700; font-size:12.5px; cursor:pointer;}
+
+  .stock-card.stale{opacity:.55;}
+  .no-data-tag{font-size:10px; color:var(--bear); margin-top:2px;}
+  .demo-badge{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; background:var(--warn-bg); color:var(--warn); padding:5px 10px; border-radius:20px; border:1px solid rgba(231,185,78,.35); cursor:pointer;}
+
+  /* Phase 4: market toggle, search, US market, PWA install */
+  #market-bar{padding:0 16px;}
+  .market-toggle{display:flex; gap:8px; margin-top:8px;}
+  .market-toggle button{flex:1; padding:10px 0; border-radius:12px; border:1px solid var(--border); background:var(--card); color:var(--text-dim); font-weight:700; font-size:13px; cursor:pointer; font-family:'Inter';}
+  .market-toggle button.active{background:rgba(47,217,196,.13); border-color:var(--accent-teal); color:var(--accent-teal);}
+
+  .search-wrap{position:relative; margin:10px 0;}
+  .search-input{width:100%; background:var(--card); border:1px solid var(--border); color:var(--text); padding:13px 14px 13px 40px; border-radius:14px; font-size:14px; font-family:'Inter';}
+  .search-input::placeholder{color:var(--text-dim2);}
+  .search-icon{position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--text-dim2); font-size:15px;}
+  .search-results{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
+
+  .us-note{background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:11px 13px; font-size:11px; color:var(--text-dim); line-height:1.6; margin:10px 0;}
+  .us-popular-card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:13px; margin-bottom:9px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;}
+  .us-popular-card:active{border-color:var(--accent-teal);}
+  .us-popular-card .sym{font-weight:700; font-size:14.5px;}
+  .us-popular-card .nm{font-size:11px; color:var(--text-dim2); margin-top:2px;}
+  .us-popular-card .arrow{color:var(--text-dim2);}
+
+  .install-banner{margin:8px 16px 0; padding:10px 13px; border-radius:12px; background:rgba(47,217,196,.1); border:1px solid rgba(47,217,196,.3); display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:11.5px; color:var(--accent-teal);}
+  .install-banner button{background:var(--accent-teal); color:#04211d; border:none; padding:7px 14px; border-radius:9px; font-weight:700; font-size:11.5px; cursor:pointer; white-space:nowrap;}
+  .install-dismiss{color:var(--text-dim2); font-size:16px; cursor:pointer; padding:0 4px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <h1 class="mr">भारतीय स्टॉक स्कॅनर</h1>
+    <div class="sub">Educational Analysis Tool · NSE/BSE + US · Live Data</div>
+  </div>
+  <div id="status-bar"></div>
+  <div id="market-bar"></div>
+  <main id="main"></main>
+</div>
+
+<div class="bottomnav">
+  <button class="navbtn" data-view="home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+    <span class="mr">होम</span>
+  </button>
+  <button class="navbtn" data-view="scanner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <span class="mr">स्कॅनर</span>
+  </button>
+  <button class="navbtn" data-view="watchlist">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6.5 7 1-5.2 4.9 1.3 7-6.1-3.4-6.1 3.4 1.3-7L2 9.5l7-1z"/></svg>
+    <span class="mr">वॉचलिस्ट</span>
+  </button>
+  <button class="navbtn" data-view="papertrade">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+    <span class="mr">पेपर ट्रेड</span>
+  </button>
+</div>
+
+<script>
+/* ===================== DEMO DATA ENGINE (manual fallback only — never auto-used) =====================
+   This generates artificial candles. It is ONLY used if the person explicitly switches to
+   "Demo Mode" (e.g. backend not deployed yet, or just previewing the UI). Live mode never
+   silently falls back to this. */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+
+const UNIVERSE = [
+  {sym:"RELIANCE", name:"Reliance Industries", sector:"ENERGY", base:2850, seed:11},
+  {sym:"TCS", name:"Tata Consultancy Services", sector:"IT", base:3900, seed:22},
+  {sym:"INFY", name:"Infosys", sector:"IT", base:1720, seed:33},
+  {sym:"HDFCBANK", name:"HDFC Bank", sector:"BANKING", base:1650, seed:44},
+  {sym:"ICICIBANK", name:"ICICI Bank", sector:"BANKING", base:1210, seed:55},
+  {sym:"SBIN", name:"State Bank of India", sector:"BANKING", base:820, seed:66},
+  {sym:"ITC", name:"ITC Ltd", sector:"FMCG", base:465, seed:77},
+  {sym:"HINDUNILVR", name:"Hindustan Unilever", sector:"FMCG", base:2480, seed:88},
+  {sym:"BAJFINANCE", name:"Bajaj Finance", sector:"FINANCIAL SERVICES", base:7100, seed:99},
+  {sym:"MARUTI", name:"Maruti Suzuki", sector:"AUTO", base:12400, seed:111},
+  {sym:"SUNPHARMA", name:"Sun Pharma", sector:"PHARMA", base:1780, seed:122},
+  {sym:"TATASTEEL", name:"Tata Steel", sector:"METAL", base:162, seed:133},
+  {sym:"LT", name:"Larsen & Toubro", sector:"INFRA", base:3550, seed:144},
+  {sym:"KOTAKBANK", name:"Kotak Mahindra Bank", sector:"BANKING", base:1780, seed:155},
+  {sym:"ADANIENT", name:"Adani Enterprises", sector:"ENERGY", base:2650, seed:166},
+  {sym:"ASIANPAINT", name:"Asian Paints", sector:"FMCG", base:2380, seed:177},
+];
+const INDICES = [
+  {sym:"NIFTY50", name:"NIFTY 50", base:24650, seed:1},
+  {sym:"BANKNIFTY", name:"BANK NIFTY", base:51800, seed:2},
+];
+
+function genSeries(base, seed, days=260){
+  const rnd = mulberry32(seed);
+  // give each seed a mild drift bias so trends differ stock to stock
+  const drift = (rnd()-0.5)*0.0016;
+  let price = base * (0.85 + rnd()*0.1);
+  const out = [];
+  let baseVol = 800000 + rnd()*4000000;
+  for(let i=0;i<days;i++){
+    const volFactor = 0.010 + rnd()*0.014;
+    const change = (rnd()-0.5)*volFactor*price + drift*price;
+    const open = price;
+    let close = open + change;
+    if(close < base*0.4) close = base*0.4;
+    const wick = Math.abs(change)*(0.3+rnd()*0.9) + price*0.002*rnd();
+    const high = Math.max(open,close) + wick*rnd();
+    const low = Math.min(open,close) - wick*rnd();
+    let volume = baseVol * (0.5 + rnd()*1.1);
+    if(rnd() > 0.93) volume *= (1.8 + rnd()*1.4); // occasional spike
+    out.push({open, high, low, close, volume: Math.round(volume)});
+    price = close;
+  }
+  return out;
+}
+
+/* ============================= INDICATORS ============================= */
+function ema(vals, period){
+  const k = 2/(period+1);
+  const out = new Array(vals.length).fill(null);
+  let seedSMA = 0;
+  if(vals.length < period) return out;
+  for(let i=0;i<period;i++) seedSMA += vals[i];
+  seedSMA/=period;
+  out[period-1] = seedSMA;
+  for(let i=period;i<vals.length;i++){
+    out[i] = vals[i]*k + out[i-1]*(1-k);
+  }
+  return out;
+}
+function sma(vals, period){
+  const out = new Array(vals.length).fill(null);
+  for(let i=period-1;i<vals.length;i++){
+    let s=0; for(let j=i-period+1;j<=i;j++) s+=vals[j];
+    out[i]=s/period;
+  }
+  return out;
+}
+function rsi(closes, period=14){
+  const out = new Array(closes.length).fill(null);
+  let gains=0, losses=0;
+  for(let i=1;i<=period;i++){
+    const d = closes[i]-closes[i-1];
+    if(d>=0) gains+=d; else losses-=d;
+  }
+  gains/=period; losses/=period;
+  out[period] = 100 - 100/(1+ (losses===0?100:gains/losses));
+  for(let i=period+1;i<closes.length;i++){
+    const d = closes[i]-closes[i-1];
+    const g = d>0?d:0, l = d<0?-d:0;
+    gains = (gains*(period-1)+g)/period;
+    losses = (losses*(period-1)+l)/period;
+    const rs = losses===0 ? 100 : gains/losses;
+    out[i] = 100 - 100/(1+rs);
+  }
+  return out;
+}
+function macdCalc(closes){
+  const e12 = ema(closes,12), e26 = ema(closes,26);
+  const macdLine = closes.map((_,i)=> (e12[i]!=null && e26[i]!=null) ? e12[i]-e26[i] : null);
+  const cleaned = macdLine.map(v=> v==null? 0: v);
+  const signalRaw = ema(cleaned,9);
+  const signal = macdLine.map((v,i)=> v==null?null: signalRaw[i]);
+  const hist = macdLine.map((v,i)=> (v!=null && signal[i]!=null)? v-signal[i]: null);
+  return {macdLine, signal, hist};
+}
+function atr(bars, period=14){
+  const out = new Array(bars.length).fill(null);
+  const tr = bars.map((b,i)=>{
+    if(i===0) return b.high-b.low;
+    return Math.max(b.high-b.low, Math.abs(b.high-bars[i-1].close), Math.abs(b.low-bars[i-1].close));
+  });
+  let s=0; for(let i=0;i<period;i++) s+=tr[i];
+  out[period-1]=s/period;
+  for(let i=period;i<bars.length;i++){
+    out[i] = (out[i-1]*(period-1)+tr[i])/period;
+  }
+  return out;
+}
+function adxCalc(bars, period=14){
+  const len=bars.length;
+  const plusDM=new Array(len).fill(0), minusDM=new Array(len).fill(0), tr=new Array(len).fill(0);
+  for(let i=1;i<len;i++){
+    const upMove = bars[i].high-bars[i-1].high;
+    const downMove = bars[i-1].low-bars[i].low;
+    plusDM[i] = (upMove>downMove && upMove>0) ? upMove : 0;
+    minusDM[i] = (downMove>upMove && downMove>0) ? downMove : 0;
+    tr[i] = Math.max(bars[i].high-bars[i].low, Math.abs(bars[i].high-bars[i-1].close), Math.abs(bars[i].low-bars[i-1].close));
+  }
+  function wilderSmooth(arr){
+    const out=new Array(len).fill(null);
+    let s=0; for(let i=1;i<=period;i++) s+=arr[i];
+    out[period]=s;
+    for(let i=period+1;i<len;i++) out[i]=out[i-1]-(out[i-1]/period)+arr[i];
+    return out;
+  }
+  const trS = wilderSmooth(tr), pdmS = wilderSmooth(plusDM), mdmS = wilderSmooth(minusDM);
+  const plusDI=new Array(len).fill(null), minusDI=new Array(len).fill(null), dx=new Array(len).fill(null);
+  for(let i=period;i<len;i++){
+    if(trS[i]){
+      plusDI[i]=100*pdmS[i]/trS[i];
+      minusDI[i]=100*mdmS[i]/trS[i];
+      const sum = plusDI[i]+minusDI[i];
+      dx[i] = sum? 100*Math.abs(plusDI[i]-minusDI[i])/sum : 0;
+    }
+  }
+  const adx=new Array(len).fill(null);
+  let s=0,cnt=0;
+  for(let i=period;i<period*2 && i<len;i++){ if(dx[i]!=null){s+=dx[i];cnt++;} }
+  if(cnt) adx[period*2-1]=s/cnt;
+  for(let i=period*2;i<len;i++){
+    adx[i] = adx[i-1]!=null && dx[i]!=null ? (adx[i-1]*(period-1)+dx[i])/period : adx[i-1];
+  }
+  return adx;
+}
+function swingLevels(bars, lookback=40, window=3){
+  const start = Math.max(0, bars.length-lookback);
+  let swingHigh=-Infinity, swingLow=Infinity;
+  let resistance=-Infinity, support=Infinity;
+  for(let i=start;i<bars.length;i++){
+    resistance = Math.max(resistance, bars[i].high);
+    support = Math.min(support, bars[i].low);
+  }
+  // find most recent local pivot (fractal) for swing SL reference
+  for(let i=bars.length-window-1;i>=Math.max(start,window);i--){
+    const b=bars[i];
+    let isHigh=true, isLow=true;
+    for(let j=i-window;j<=i+window;j++){
+      if(j===i) continue;
+      if(bars[j].high>=b.high) isHigh=false;
+      if(bars[j].low<=b.low) isLow=false;
+    }
+    if(isHigh && swingHigh===-Infinity) swingHigh=b.high;
+    if(isLow && swingLow===Infinity) swingLow=b.low;
+    if(swingHigh!==-Infinity && swingLow!==Infinity) break;
+  }
+  if(swingHigh===-Infinity) swingHigh = resistance;
+  if(swingLow===Infinity) swingLow = support;
+  return {resistance, support, swingHigh, swingLow};
+}
+function approxVWAP(bars, period=20){
+  // Phase-1 demo approximation (real VWAP needs intraday tick data — resets daily)
+  const start = Math.max(0, bars.length-period);
+  let pv=0, vv=0;
+  for(let i=start;i<bars.length;i++){
+    const typical = (bars[i].high+bars[i].low+bars[i].close)/3;
+    pv += typical*bars[i].volume; vv += bars[i].volume;
+  }
+  return vv? pv/vv : bars[bars.length-1].close;
+}
+
+/* ============================= SCORING ENGINE (configurable) ============================= */
+const WEIGHTS = {
+  trend:20, vwap:10, rsi:10, macd:10, volume:15, adx:10, breakout:15, candle:5, sector:5
+};
+function scoreStock(bars, sectorRank){
+  const closes = bars.map(b=>b.close);
+  const e20 = ema(closes,20), e50 = ema(closes,50), e200 = ema(closes,200);
+  const rsiArr = rsi(closes,14);
+  const {macdLine, signal} = macdCalc(closes);
+  const atrArr = atr(bars,14);
+  const adxArr = adxCalc(bars,14);
+  const i = bars.length-1;
+  const close = closes[i];
+  const vwap = approxVWAP(bars,20);
+  const avgVol20 = sma(bars.map(b=>b.volume),20)[i];
+  const {resistance, support, swingHigh, swingLow} = swingLevels(bars.slice(0,i+1),40);
+  const week52 = bars.slice(Math.max(0,i-251), i+1);
+  const high52 = Math.max(...week52.map(b=>b.high));
+  const low52 = Math.min(...week52.map(b=>b.low));
+
+  const items = [];
+  let total = 0;
+  function add(key,label,ok,points,reason){
+    const pts = ok? points:0;
+    total += pts;
+    items.push({key,label,ok,points:pts,max:points,reason});
+  }
+
+  const trendOK = e20[i]!=null && e50[i]!=null && e200[i]!=null && e20[i]>e50[i] && e50[i]>e200[i];
+  add('trend','Trend (EMA20>EMA50>EMA200)', trendOK, WEIGHTS.trend,
+    trendOK? `EMA20 (₹${e20[i].toFixed(1)}) > EMA50 (₹${e50[i].toFixed(1)}) > EMA200 (₹${e200[i]?e200[i].toFixed(1):'-'})`
+            : 'EMA रांग bullish नाही');
+
+  const vwapOK = close > vwap;
+  add('vwap','Price above VWAP', vwapOK, WEIGHTS.vwap, `Close ₹${close.toFixed(1)} vs VWAP ₹${vwap.toFixed(1)}`);
+
+  const rsiVal = rsiArr[i];
+  const rsiOK = rsiVal!=null && rsiVal>=50 && rsiVal<=65;
+  add('rsi','RSI 50–65 zone', rsiOK, WEIGHTS.rsi, `RSI = ${rsiVal?rsiVal.toFixed(1):'-'}`);
+
+  const macdOK = macdLine[i]!=null && signal[i]!=null && macdLine[i-1]!=null && signal[i-1]!=null &&
+                 macdLine[i]>signal[i] && macdLine[i-1]<=signal[i-1];
+  const macdBullish = macdLine[i]!=null && signal[i]!=null && macdLine[i]>signal[i];
+  add('macd','MACD bullish crossover', macdOK || macdBullish, WEIGHTS.macd,
+     macdOK? 'नुकताच bullish crossover झाला' : (macdBullish? 'MACD सध्या signal च्या वर आहे':'MACD bullish नाही'));
+
+  const volOK = avgVol20 && bars[i].volume > 1.5*avgVol20;
+  add('volume','Volume > 1.5x avg', volOK, WEIGHTS.volume,
+     `Volume ${(bars[i].volume/1e5).toFixed(1)}L vs Avg ${(avgVol20/1e5).toFixed(1)}L`);
+
+  const adxOK = adxArr[i]!=null && adxArr[i]>20;
+  add('adx','ADX > 20 (strong trend)', adxOK, WEIGHTS.adx, `ADX = ${adxArr[i]?adxArr[i].toFixed(1):'-'}`);
+
+  const breakoutOK = close > resistance*0.998;
+  add('breakout','Breakout above resistance', breakoutOK, WEIGHTS.breakout,
+     `Close ₹${close.toFixed(1)} vs Resistance ₹${resistance.toFixed(1)}`);
+
+  const prevBar = bars[i-1];
+  const candleOK = close>bars[i].open && (close-bars[i].open) > 0.4*(bars[i].high-bars[i].low||1);
+  add('candle','Bullish candle confirmation', candleOK, WEIGHTS.candle, candleOK? 'मजबूत bullish candle' : 'ठोस bullish candle नाही');
+
+  const sectorOK = sectorRank <= 0.5;
+  add('sector','Sector relative strength', sectorOK, WEIGHTS.sector, sectorOK? 'Sector top-half मध्ये आहे' : 'Sector कमजोर आहे');
+
+  let category, catKey;
+  if(total>=90){category='STRONG SETUP';catKey='strong';}
+  else if(total>=75){category='GOOD SETUP';catKey='good';}
+  else if(total>=60){category='WATCHLIST';catKey='watch';}
+  else if(total>=40){category='WEAK';catKey='weak';}
+  else {category='AVOID';catKey='avoid';}
+
+  const trendLabel = trendOK ? 'Bullish' : (e20[i]!=null && e50[i]!=null && e20[i]<e50[i] && e50[i]<e200[i] ? 'Bearish' : 'Sideways');
+
+  // Entry / SL / Target
+  const entry = breakoutOK ? close : resistance*1.001;
+  const atrVal = atrArr[i] || (close*0.015);
+  const slSwing = swingLow;
+  const slATR = close - 1.5*atrVal;
+  const sl = Math.min(slSwing, slATR) > 0 ? Math.max(slSwing, slATR) === slSwing ? slSwing : slATR : slATR; // use the tighter-but-safe (higher of the two, i.e. closer) — pick max(swing,ATR) capped below entry
+  const finalSL = Math.min(entry*0.995, Math.max(slSwing, slATR)); // ensure SL below entry, prefer the closer (less arbitrary) level
+  const risk = entry - finalSL;
+  const target1 = entry + risk*2;
+  const resistanceExtTarget = Math.max(target1, resistance + (resistance-support)*0.5);
+  const target2 = entry + risk*3 > resistanceExtTarget ? entry + risk*3 : resistanceExtTarget;
+  const rr = risk>0 ? (target1-entry)/risk : null;
+
+  // Confirmations for BUY SETUP verdict
+  const confirmations = [
+    {label:'Trend confirmation', ok: trendOK},
+    {label:'Momentum confirmation (RSI+MACD)', ok: rsiOK && macdBullish},
+    {label:'Volume confirmation', ok: volOK},
+    {label:'Breakout confirmation', ok: breakoutOK},
+  ];
+  const confirmCount = confirmations.filter(c=>c.ok).length;
+  const verdict = confirmCount>=3 ? 'BUY_SETUP' : 'NO_TRADE';
+
+  return {
+    close, changePct: ((close - closes[i-1])/closes[i-1])*100,
+    e20:e20[i], e50:e50[i], e200:e200[i], rsi:rsiVal, macd:macdLine[i], macdSignal:signal[i],
+    vwap, adx:adxArr[i], atr:atrVal, avgVol20, volume:bars[i].volume,
+    support, resistance, high52, low52,
+    prevHigh: bars[i-1].high, prevLow: bars[i-1].low,
+    score: total, category, catKey, items, trendLabel,
+    entry, sl: finalSL, target1, target2, risk, rr,
+    confirmations, confirmCount, verdict
+  };
+}
+
+/* ============================= BUILD DATASET ============================= */
+let STOCKS = [];
+let IDX_DATA = [];
+let SECTOR = {ranked:[], rankMap:{}};
+let marketTrend = 'sideways';
+let bullCount = 0, bearCount = 0, advancers = 0, decliners = 0;
+
+// Sector strength ranking (avg 5-day % change)
+function sectorPerf(){
+  const bySector = {};
+  STOCKS.forEach(s=>{
+    if(!s.bars || s.bars.length<6) return;
+    const c = s.bars.map(b=>b.close);
+    const chg = (c[c.length-1]-c[c.length-6])/c[c.length-6]*100;
+    if(!bySector[s.sector]) bySector[s.sector]=[];
+    bySector[s.sector].push(chg);
+  });
+  const arr = Object.entries(bySector).map(([sector,arr])=>({
+    sector, avg: arr.reduce((a,b)=>a+b,0)/arr.length
+  })).sort((a,b)=>b.avg-a.avg);
+  const rankMap = {};
+  arr.forEach((s,idx)=> rankMap[s.sector] = idx/(arr.length-1||1));
+  return {ranked:arr, rankMap};
+}
+function idxTrend(bars){
+  const c = bars.map(b=>b.close);
+  const e20=ema(c,20), e50=ema(c,50);
+  const i=c.length-1;
+  if(e20[i]==null||e50[i]==null) return 'sideways';
+  if(e20[i]>e50[i]*1.002) return 'bullish';
+  if(e20[i]<e50[i]*0.998) return 'bearish';
+  return 'sideways';
+}
+
+// Recompute sector ranking, per-stock scores, and market breadth from
+// whatever is currently in STOCKS / IDX_DATA (called after every data load).
+function computeDerived(){
+  SECTOR = sectorPerf();
+  STOCKS.forEach(s=>{
+    if(!s.bars || s.bars.length<30){ s.result=null; s.error = s.error || 'अपुरा data'; return; }
+    try{ s.result = scoreStock(s.bars, SECTOR.rankMap[s.sector] ?? 0.5); s.error=null; }
+    catch(e){ s.result=null; s.error='Score गणना करता आली नाही'; }
+  });
+  IDX_DATA.forEach(x=>{
+    if(!x.bars || x.bars.length<3){ x.trend='sideways'; x.changePct=0; return; }
+    x.trend = idxTrend(x.bars);
+    const n = x.bars.length;
+    x.changePct = (x.bars[n-1].close - x.bars[n-2].close)/x.bars[n-2].close*100;
+  });
+  marketTrend = IDX_DATA[0] ? IDX_DATA[0].trend : 'sideways';
+  const scored = STOCKS.filter(s=>s.result);
+  bullCount = scored.filter(s=>s.result.trendLabel==='Bullish').length;
+  bearCount = scored.filter(s=>s.result.trendLabel==='Bearish').length;
+  advancers = scored.filter(s=>s.result.changePct>0).length;
+  decliners = scored.length - advancers;
+}
+
+// DEMO MODE: build the whole dataset locally with generated candles.
+function buildDemoDataset(){
+  STOCKS = UNIVERSE.map(u=>({...u, bars: genSeries(u.base, u.seed), error:null}));
+  IDX_DATA = INDICES.map(u=>({...u, bars: genSeries(u.base, u.seed)}));
+  computeDerived();
+}
+
+/* ============================= RISK MANAGEMENT ============================= */
+function calcRisk(capital, riskPct, entry, sl){
+  const riskRupees = capital * (riskPct/100);
+  const riskPerShare = Math.abs(entry - sl);
+  const qty = riskPerShare>0 ? Math.floor(riskRupees / riskPerShare) : 0;
+  const positionValue = qty * entry;
+  return {riskRupees, riskPerShare, qty, positionValue};
+}
+
+/* ============================= BACKTESTING ENGINE ============================= */
+// Walk bar-by-bar; enter next-day-open when score>=threshold & BUY_SETUP; exit on SL/Target1/time-stop.
+// No look-ahead: score at day i only ever sees bars[0..i].
+function backtestStock(symbolObj, threshold=75, maxHoldDays=20){
+  const bars = symbolObj.bars;
+  const sectorRank = SECTOR.rankMap[symbolObj.sector] ?? 0.5;
+  const WARMUP = 200; // EMA200 needs warmup
+  const trades = [];
+  let i = WARMUP;
+  while(i < bars.length-2){
+    const slice = bars.slice(0, i+1);
+    let res;
+    try{ res = scoreStock(slice, sectorRank); } catch(e){ i++; continue; }
+    if(res.verdict==='BUY_SETUP' && res.score>=threshold){
+      const entryIdx = i+1;
+      const entry = bars[entryIdx].open;
+      const sl = res.sl;
+      const target1 = res.target1;
+      let exitIdx = Math.min(entryIdx+maxHoldDays, bars.length-1);
+      let exitPrice = bars[exitIdx].close;
+      let outcome = 'time';
+      for(let j=entryIdx;j<=Math.min(entryIdx+maxHoldDays, bars.length-1);j++){
+        if(bars[j].low <= sl){ exitPrice = sl; exitIdx=j; outcome='sl'; break; }
+        if(bars[j].high >= target1){ exitPrice = target1; exitIdx=j; outcome='target'; break; }
+      }
+      const pnlPct = (exitPrice-entry)/entry*100;
+      trades.push({entryIdx, exitIdx, entry, sl, target1, exitPrice, pnlPct, outcome, win: pnlPct>0});
+      i = exitIdx+1; // no overlapping trades
+    } else {
+      i++;
+    }
+  }
+  // stats
+  const total = trades.length;
+  const wins = trades.filter(t=>t.win);
+  const losses = trades.filter(t=>!t.win);
+  const winRate = total? (wins.length/total*100) : 0;
+  const avgProfit = wins.length? wins.reduce((a,t)=>a+t.pnlPct,0)/wins.length : 0;
+  const avgLoss = losses.length? Math.abs(losses.reduce((a,t)=>a+t.pnlPct,0)/losses.length) : 0;
+  const grossProfit = wins.reduce((a,t)=>a+t.pnlPct,0);
+  const grossLoss = Math.abs(losses.reduce((a,t)=>a+t.pnlPct,0));
+  const profitFactor = grossLoss>0 ? grossProfit/grossLoss : (grossProfit>0? Infinity : 0);
+  // equity curve (compounded, assuming full re-invest each trade) for max drawdown
+  let equity = 100, peak = 100, maxDD = 0;
+  trades.forEach(t=>{
+    equity *= (1+t.pnlPct/100);
+    peak = Math.max(peak, equity);
+    const dd = (peak-equity)/peak*100;
+    maxDD = Math.max(maxDD, dd);
+  });
+  const netReturn = (equity-100);
+  const avgRR = avgLoss>0 ? avgProfit/avgLoss : null;
+  return {trades, total, wins:wins.length, losses:losses.length, winRate, avgProfit, avgLoss, profitFactor, maxDD, netReturn, avgRR};
+}
+
+/* ============================= STATE ============================= */
+let watchlist = new Set(['RELIANCE','TCS']);
+let usWatchlist = new Set();
+let scannerSearchQuery = '';
+let currentView = 'home';
+let currentSymbol = null;
+let scannerFilter = 'all';
+let paperTrades = []; // {id, symbol, side, entry, sl, target1, target2, qty, capital, riskPct, riskRupees, positionValue, status, exitPrice, pnl, pnlPct, openedAt}
+let ptTab = 'trades'; // 'trades' | 'backtest'
+let btSymbol = 'RELIANCE';
+let btThreshold = 75;
+let btResult = null;
+let tradeIdCounter = 1;
+
+// Phase 3: live data state
+const API_BASE = ''; // same origin as this page (served by the FastAPI backend)
+let appState = {
+  mode: null,            // 'live' | 'demo' | null (undecided yet)
+  authenticated: false,
+  timeframe: '1d',       // '5m' | '15m' | '1h' | '1d'
+  autoRefreshSec: 0,      // 0 = off
+  lastUpdated: null,
+  marketStatus: null,    // {is_open, label, server_time_ist}
+  dataReady: false,
+  loadError: null,
+  market: 'IN',           // 'IN' | 'US'
+};
+let autoRefreshTimer = null;
+
+// --- US market state (separate from India — different data source, no auto-scan) ---
+let usState = {
+  status: null,        // {is_open, label}
+  popular: [],          // starter list from backend
+  cache: {},             // sym -> {bars, result}
+  searchQuery: '',
+  searchResults: [],
+  searching: false,
+};
+let searchQuery = '';   // India search (client-side, from STOCKS array)
+
+/* ============================= LIVE DATA ENGINE ============================= */
+async function fetchJSON(url, opts={}){
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort(), 15000);
+  try{
+    const resp = await fetch(API_BASE+url, {...opts, signal: controller.signal});
+    clearTimeout(timeoutId);
+    let body;
+    try{ body = await resp.json(); } catch(e){ body = null; }
+    if(!resp.ok){
+      const msg = (body && body.message_mr) || 'Live market data मिळत नाही. कृपया काही वेळाने पुन्हा प्रयत्न करा.';
+      const code = (body && body.error_code) || ('http_'+resp.status);
+      throw {isAppError:true, code, message: msg, status: resp.status};
+    }
+    return body;
+  }catch(err){
+    clearTimeout(timeoutId);
+    if(err.name==='AbortError'){
+      throw {isAppError:true, code:'timeout', message:'Live market data मिळत नाही (timeout). कृपया काही वेळाने पुन्हा प्रयत्न करा.'};
+    }
+    if(err.isAppError) throw err;
+    throw {isAppError:true, code:'network_error', message:'Backend server शी connection होत नाही. Internet/Server तपासा.'};
+  }
+}
+
+async function checkBackendReachable(){
+  try{ await fetchJSON('/api/market/status'); return true; }
+  catch(e){ return false; }
+}
+async function refreshMarketStatus(){
+  try{ appState.marketStatus = await fetchJSON('/api/market/status'); }
+  catch(e){ appState.marketStatus = null; }
+}
+async function checkAuth(){
+  try{
+    const r = await fetchJSON('/api/auth/status');
+    appState.authenticated = !!r.authenticated;
+    return appState.authenticated;
+  }catch(e){ appState.authenticated = false; return false; }
+}
+
+// Fetch candles for one symbol from our backend (which itself calls Upstox securely).
+async function fetchHistoricalBars(sym, timeframe){
+  const r = await fetchJSON(`/api/market/historical/${sym}?timeframe=${timeframe}`);
+  return r.bars.map(b=>({open:b.open, high:b.high, low:b.low, close:b.close, volume:b.volume, timestamp:b.timestamp}));
+}
+
+// Small concurrency pool so we don't fire 16+ requests at once (avoids Upstox rate limits).
+async function pooledFetch(items, worker, concurrency=4){
+  const results = new Array(items.length);
+  let idx = 0;
+  async function runNext(){
+    while(idx < items.length){
+      const my = idx++;
+      try{ results[my] = {ok:true, value: await worker(items[my], my)}; }
+      catch(e){ results[my] = {ok:false, error:e}; }
+    }
+  }
+  await Promise.all(new Array(Math.min(concurrency, items.length)).fill(0).map(runNext));
+  return results;
+}
+
+async function loadLiveData(timeframe){
+  appState.loadError = null;
+  // indices first
+  const idxResults = await pooledFetch(INDICES, async (u)=>{
+    const bars = await fetchHistoricalBars(u.sym, timeframe);
+    return {...u, bars};
+  }, 2);
+  IDX_DATA = idxResults.map((r,i)=> r.ok ? r.value : {...INDICES[i], bars:[]});
+
+  const stockResults = await pooledFetch(UNIVERSE, async (u)=>{
+    const bars = await fetchHistoricalBars(u.sym, timeframe);
+    return {...u, bars, error:null};
+  }, 4);
+  STOCKS = stockResults.map((r,i)=>{
+    if(r.ok) return r.value;
+    return {...UNIVERSE[i], bars:[], error: (r.error && r.error.message) || 'Live data मिळाला नाही'};
+  });
+
+  const anyStockOk = STOCKS.some(s=>s.bars && s.bars.length>0);
+  if(!anyStockOk){
+    throw {isAppError:true, code:'all_failed', message:'कोणत्याही stock साठी live data मिळाला नाही. Backend/Upstox तपासा.'};
+  }
+  computeDerived();
+  appState.lastUpdated = new Date();
+  appState.dataReady = true;
+}
+
+/* ============================= US MARKET (on-demand, Marketstack, EOD-only) ============================= */
+// IMPORTANT: US stocks are fetched only when searched/opened, never auto-scanned,
+// because Marketstack's free plan allows just 100 requests/month total.
+async function fetchUSStatus(){
+  try{ usState.status = await fetchJSON('/api/us/status'); }
+  catch(e){ usState.status = null; }
+}
+async function fetchUSPopular(){
+  try{
+    const r = await fetchJSON('/api/us/popular');
+    usState.popular = r.stocks || [];
+  }catch(e){ usState.popular = []; }
+}
+async function searchUS(query){
+  usState.searchQuery = query;
+  if(!query || query.trim().length<1){ usState.searchResults = []; return; }
+  usState.searching = true;
+  try{
+    const r = await fetchJSON('/api/us/search?q='+encodeURIComponent(query));
+    usState.searchResults = r.results || [];
+  }catch(e){
+    usState.searchResults = [];
+    usState.searchError = (e && e.message) || 'US search अयशस्वी.';
+  }
+  usState.searching = false;
+}
+// Fetch + score one US stock on demand, with client-side cache too (belt & suspenders
+// against burning the free monthly quota from repeat taps in the same session).
+async function getUSStock(symbol){
+  symbol = symbol.toUpperCase();
+  if(usState.cache[symbol] && (Date.now()-usState.cache[symbol].at) < 60*60*1000){
+    return usState.cache[symbol];
+  }
+  const r = await fetchJSON('/api/us/historical/'+symbol);
+  const bars = r.bars.map(b=>({open:b.open, high:b.high, low:b.low, close:b.close, volume:b.volume||0, timestamp:b.timestamp}));
+  let result = null, error = null;
+  if(bars.length>=30){
+    try{ result = scoreStock(bars, 0.5); }catch(e){ error = 'Score गणना करता आली नाही.'; }
+  } else {
+    error = 'पुरेसा historical data नाही.';
+  }
+  const entry = {symbol, bars, result, error, at: Date.now()};
+  usState.cache[symbol] = entry;
+  return entry;
+}
+
+async function doRefresh(showLoading=true){
+  if(appState.mode==='demo'){
+    buildDemoDataset();
+    appState.lastUpdated = new Date();
+    rerenderCurrentView();
+    return;
+  }
+  if(showLoading){
+    document.getElementById('main').innerHTML = loadingScreenHTML('Live data आणत आहे...');
+  }
+  await refreshMarketStatus();
+  try{
+    await loadLiveData(appState.timeframe);
+    renderStatusBar();
+    rerenderCurrentView();
+  }catch(e){
+    appState.loadError = (e && e.message) || 'Live market data मिळत नाही.';
+    document.getElementById('main').innerHTML = errorScreenHTML(appState.loadError);
+    renderStatusBar();
+  }
+}
+
+function rerenderCurrentView(){
+  if(currentSymbol){ openDetail(currentSymbol); }
+  else { setView(currentView); }
+}
+
+function setTimeframe(tf){
+  appState.timeframe = tf;
+  doRefresh();
+}
+function setAutoRefresh(sec){
+  appState.autoRefreshSec = parseInt(sec,10)||0;
+  if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer=null; }
+  if(appState.autoRefreshSec>0){
+    autoRefreshTimer = setInterval(()=>doRefresh(false), appState.autoRefreshSec*1000);
+  }
+  renderStatusBar();
+}
+function manualRefresh(){ doRefresh(true); }
+
+function switchToDemoMode(){
+  appState.mode = 'demo';
+  appState.dataReady = false;
+  buildDemoDataset();
+  appState.dataReady = true;
+  appState.lastUpdated = new Date();
+  renderStatusBar();
+  setView('home');
+}
+async function switchToLiveMode(){
+  appState.mode = 'live';
+  appState.dataReady = false;
+  document.getElementById('main').innerHTML = loadingScreenHTML('Live Upstox data आणत आहे...');
+  const authed = await checkAuth();
+  if(!authed){
+    renderStatusBar();
+    document.getElementById('main').innerHTML = loginScreenHTML();
+    return;
+  }
+  await doRefresh(true);
+}
+
+function loadingScreenHTML(msg){
+  return `<div class="loading-screen"><div class="spinner"></div><div class="mr">${msg}</div><div class="sub2">कृपया थांबा…</div></div>`;
+}
+function errorScreenHTML(message){
+  return `<div class="error-screen">
+    <div class="icon">⚠️</div>
+    <h3 class="mr">Live market data मिळत नाही</h3>
+    <p class="mr">${message}<br>कृपया काही वेळाने पुन्हा प्रयत्न करा.</p>
+    <button class="retry-btn mr" onclick="doRefresh(true)">पुन्हा प्रयत्न करा</button>
+    <div style="margin-top:10px;"><span class="demo-badge" onclick="switchToDemoMode()">⚠️ त्याऐवजी Demo Data पहा</span></div>
+  </div>`;
+}
+function loginScreenHTML(){
+  return `<div class="login-screen">
+    <div class="icon">🔐</div>
+    <h2 class="mr">Upstox शी Login करा</h2>
+    <p class="mr">Live NSE data पाहण्यासाठी दररोज एकदा तुमच्या Upstox account ने login करणे आवश्यक आहे (हे तुमच्या bank app सारखेच सुरक्षित आहे — तुमचा password या application ला कधीही दिसत नाही).</p>
+    <a class="login-btn" href="/login">Upstox शी Login करा</a>
+    <div class="login-note mr">Login झाल्यावर हे page आपोआप डेटा दाखवायला सुरुवात करेल. Access token दररोज संपतो, त्यामुळे रोज एकदा हे करावे लागेल.</div>
+    <div style="margin-top:18px;"><span class="demo-badge" onclick="switchToDemoMode()">⚠️ त्याऐवजी Demo Data पहा</span></div>
+  </div>`;
+}
+
+function renderStatusBar(){
+  const el = document.getElementById('status-bar');
+  if(appState.mode==='demo'){
+    el.innerHTML = `<div class="status-bar-inner closed">
+      <div class="status-left"><span class="dotpulse"></span> Demo Data – Live market data जोडलेले नाही</div>
+      <div class="status-actions"><span class="demo-badge" onclick="switchToLiveMode()">🔴 Live Data कडे जा</span></div>
+    </div>`;
+    return;
+  }
+  if(!appState.dataReady){
+    el.innerHTML = '';
+    return;
+  }
+  const ms = appState.marketStatus;
+  const isOpen = ms && ms.is_open;
+  const cls = isOpen ? 'live' : 'closed';
+  const label = ms ? (isOpen? 'Live' : 'Market Closed') : 'Status अज्ञात';
+  const lastUpd = appState.lastUpdated ? appState.lastUpdated.toLocaleString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}) : '-';
+  el.innerHTML = `
+  <div class="status-bar-inner ${cls}">
+    <div class="status-left"><span class="dotpulse"></span> ${label} · Last Updated: ${lastUpd}</div>
+  </div>
+  <div class="status-bar-inner ${cls}" style="margin-top:6px;">
+    <div class="status-actions" style="flex-wrap:wrap; width:100%; justify-content:space-between;">
+      <select onchange="setTimeframe(this.value)" title="Timeframe">
+        <option value="5m" ${appState.timeframe==='5m'?'selected':''}>5 min</option>
+        <option value="15m" ${appState.timeframe==='15m'?'selected':''}>15 min</option>
+        <option value="1h" ${appState.timeframe==='1h'?'selected':''}>1 hour</option>
+        <option value="1d" ${appState.timeframe==='1d'?'selected':''}>Daily</option>
+      </select>
+      <select onchange="setAutoRefresh(this.value)" title="Auto-refresh">
+        <option value="0" ${appState.autoRefreshSec===0?'selected':''}>Auto-refresh: Off</option>
+        <option value="15" ${appState.autoRefreshSec===15?'selected':''}>15 सेकंद</option>
+        <option value="30" ${appState.autoRefreshSec===30?'selected':''}>30 सेकंद</option>
+        <option value="60" ${appState.autoRefreshSec===60?'selected':''}>1 मिनिट</option>
+        <option value="300" ${appState.autoRefreshSec===300?'selected':''}>5 मिनिट</option>
+      </select>
+      <button class="refresh-btn mr" onclick="manualRefresh()">⟳ Refresh</button>
+    </div>
+  </div>`;
+}
+
+async function init(){
+  document.getElementById('main').innerHTML = loadingScreenHTML('Backend server शी connect करत आहे...');
+  const reachable = await checkBackendReachable();
+  if(!reachable){
+    appState.mode = null;
+    document.getElementById('main').innerHTML = errorScreenHTML('Backend server सापडला नाही किंवा तो चालू नाही.');
+    return;
+  }
+  await refreshMarketStatus();
+  const authed = await checkAuth();
+  if(!authed){
+    appState.mode = 'live';
+    document.getElementById('main').innerHTML = loginScreenHTML();
+    renderStatusBar();
+    renderMarketBar();
+    return;
+  }
+  appState.mode = 'live';
+  await doRefresh(true);
+  renderMarketBar();
+}
+
+/* ============================= RENDER HELPERS ============================= */
+function fmt(n, dec=1){ return n==null||isNaN(n) ? '-' : n.toFixed(dec); }
+function inr(n){ return '₹'+Number(n.toFixed(2)).toLocaleString('en-IN'); }
+function usd(n){ return n==null||isNaN(n) ? '-' : '$'+Number(n.toFixed(2)).toLocaleString('en-US'); }
+function scoreColor(catKey){
+  return {strong:'var(--bull)', good:'var(--accent-teal)', watch:'var(--warn)', weak:'var(--text-dim)', avoid:'var(--bear)'}[catKey];
+}
+function ringSVG(score, catKey, size=44){
+  const r = size/2-4, c = 2*Math.PI*r;
+  const off = c - (score/100)*c;
+  const col = scoreColor(catKey);
+  return `<div class="ring-wrap" style="width:${size}px;height:${size}px">
+    <svg width="${size}" height="${size}">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="var(--border)" stroke-width="4" fill="none"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="${col}" stroke-width="4" fill="none"
+        stroke-dasharray="${c}" stroke-dashoffset="${off}" stroke-linecap="round"/>
+    </svg>
+    <div class="val" style="color:${col}">${score}</div>
+  </div>`;
+}
+function badgeHTML(catKey, category){
+  return `<span class="badge ${catKey}">${category}</span>`;
+}
+
+/* ============================= VIEWS ============================= */
+function renderHome(){
+  const scoredStocks = STOCKS.filter(s=>s.result);
+  const top5 = [...scoredStocks].sort((a,b)=>b.result.score-a.result.score).slice(0,5);
+  const avoid = scoredStocks.filter(s=>s.result.catKey==='avoid' || s.result.catKey==='weak').slice(0,4);
+  const failedStocks = STOCKS.filter(s=>!s.result);
+  const watchArr = STOCKS.filter(s=>watchlist.has(s.sym));
+
+  const trendMap = {bullish:{cls:'bullish', t:'तेजी (Bullish)'}, bearish:{cls:'bearish', t:'मंदी (Bearish)'}, sideways:{cls:'sideways', t:'संमिश्र (Sideways)'}};
+  const tm = trendMap[marketTrend];
+
+  return `
+  <div class="grid2">
+    ${IDX_DATA.map(x=>`
+      <div class="idx-card">
+        <div class="name">${x.name}</div>
+        <div class="price mono">${x.bars && x.bars.length? inr(x.bars[x.bars.length-1].close) : '-'}</div>
+        <div class="chg ${x.changePct>=0?'up':'down'}">${x.bars && x.bars.length? (x.changePct>=0?'▲':'▼')+' '+fmt(Math.abs(x.changePct),2)+'%' : 'data नाही'}</div>
+      </div>`).join('')}
+  </div>
+
+  <div class="trend-strip ${tm.cls}">
+    <div class="t1 mr">आत्ताचा Market Trend – ${tm.t}</div>
+    <div class="t2">NIFTY 50 च्या EMA20/EMA50 alignment वर आधारित. ही फक्त सध्याची स्थिती आहे, भविष्यवाणी नाही.</div>
+  </div>
+
+  <div class="breadth-row">
+    <div class="breadth-box b"><div class="n">${bullCount}</div><div class="l mr">तेजीचे Stocks</div></div>
+    <div class="breadth-box r"><div class="n">${bearCount}</div><div class="l mr">मंदीचे Stocks</div></div>
+  </div>
+  <div class="breadth-row">
+    <div class="breadth-box b"><div class="n">${advancers}</div><div class="l mr">Advancers</div></div>
+    <div class="breadth-box r"><div class="n">${decliners}</div><div class="l mr">Decliners</div></div>
+  </div>
+
+  <div class="section-title"><span class="mr">आजचे Top Setups</span><span class="count">TOP 5</span></div>
+  ${top5.length? top5.map(s=>stockCardHTML(s)).join('') : `<div class="watch-empty mr">पुरेसा live data उपलब्ध नाही</div>`}
+
+  <div class="section-title"><span class="mr">Sector Performance</span></div>
+  <div class="card-box" style="margin-top:0;padding:12px 15px;">
+    ${SECTOR.ranked.length? SECTOR.ranked.map(sec=>`
+      <div class="sector-row">
+        <span>${sec.sector}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="sector-bar"><div style="width:${Math.min(100,Math.abs(sec.avg)*18)}%; background:${sec.avg>=0?'var(--bull)':'var(--bear)'}"></div></div>
+          <span class="mono" style="color:${sec.avg>=0?'var(--bull)':'var(--bear)'}; font-size:11.5px; min-width:44px; text-align:right;">${sec.avg>=0?'+':''}${fmt(sec.avg,1)}%</span>
+        </div>
+      </div>`).join('') : `<div class="watch-empty mr">Sector data उपलब्ध नाही</div>`}
+  </div>
+
+  <div class="section-title"><span class="mr">कमजोर Stocks – सावध रहा</span></div>
+  ${avoid.length? avoid.map(s=>stockCardHTML(s)).join('') : `<div class="watch-empty mr">काहीही नाही</div>`}
+
+  ${failedStocks.length? `
+  <div class="section-title"><span class="mr">Live Data न मिळालेले Stocks</span><span class="count">${failedStocks.length}</span></div>
+  ${failedStocks.map(s=>stockCardHTML(s)).join('')}` : ''}
+
+  <div class="section-title"><span class="mr">माझी Watchlist</span><span class="count">${watchArr.length}</span></div>
+  ${watchArr.length? watchArr.map(s=>stockCardHTML(s)).join('') : `<div class="watch-empty"><span class="mr">वॉचलिस्ट रिकामी आहे</span>स्कॅनर मधून stocks add करा</div>`}
+
+  <div class="disclaimer mr">
+    हा application शैक्षणिक आणि analysis साठी आहे. कोणताही signal नफा निश्चित करत नाही.
+    प्रत्येक trade मध्ये capital risk असतो. Real money वापरण्यापूर्वी paper trading आणि स्वतःचे research करा.
+  </div>
+  `;
+}
+
+function stockCardHTML(s){
+  if(!s.result){
+    return `
+    <div class="stock-card stale" data-sym="${s.sym}">
+      <div class="ring-wrap" style="width:44px;height:44px; display:flex; align-items:center; justify-content:center; color:var(--text-dim2); font-size:16px;">–</div>
+      <div class="mid">
+        <div class="sym">${s.sym}</div>
+        <div class="sec">${s.sector}</div>
+        <div class="no-data-tag mr">Live data मिळाला नाही${s.error?': '+s.error:''}</div>
+      </div>
+    </div>`;
+  }
+  const r = s.result;
+  return `
+  <div class="stock-card" data-sym="${s.sym}" onclick="openDetail('${s.sym}')">
+    ${ringSVG(r.score, r.catKey)}
+    <div class="mid">
+      <div class="sym">${s.sym} ${watchlist.has(s.sym)?'⭐':''}</div>
+      <div class="sec">${s.sector} · ${r.trendLabel}</div>
+      <div class="metaRow">
+        <span>RSI ${fmt(r.rsi,0)}</span>
+        <span>Vol ${(r.volume/1e5).toFixed(1)}L</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="price">${inr(r.close)}</div>
+      <div class="chg ${r.changePct>=0?'up':'down'}">${r.changePct>=0?'▲':'▼'}${fmt(Math.abs(r.changePct),2)}%</div>
+      ${badgeHTML(r.catKey, r.category)}
+    </div>
+  </div>`;
+}
+
+function renderScanner(){
+  const filters = [
+    {key:'all', label:'सर्व'}, {key:'strong', label:'STRONG'}, {key:'good', label:'GOOD'},
+    {key:'watch', label:'WATCHLIST'}, {key:'weak', label:'WEAK'}, {key:'avoid', label:'AVOID'}
+  ];
+  const scored = STOCKS.filter(s=>s.result);
+  const failed = STOCKS.filter(s=>!s.result);
+  let list = [...scored].sort((a,b)=>b.result.score-a.result.score);
+  if(scannerFilter!=='all') list = list.filter(s=>s.result.catKey===scannerFilter);
+  if(scannerSearchQuery.trim()){
+    const q = scannerSearchQuery.trim().toLowerCase();
+    list = list.filter(s=> s.sym.toLowerCase().includes(q) || s.name.toLowerCase().includes(q));
+  }
+
+  return `
+  <div class="section-title mr" style="margin-top:6px;">स्टॉक स्कॅनर <span class="count">${STOCKS.length} stocks</span></div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" placeholder="Symbol किंवा नाव शोधा — उदा. RELIANCE, TCS" value="${scannerSearchQuery}" oninput="onScannerSearch(this.value)">
+  </div>
+  <div class="chips-row">
+    ${filters.map(f=>`<div class="chip ${scannerFilter===f.key?'active':''}" onclick="setFilter('${f.key}')">${f.label}</div>`).join('')}
+  </div>
+  <div style="margin-top:12px;">
+    ${list.length? list.map(s=>stockCardHTML(s)).join('') : `<div class="watch-empty mr">काहीही सापडलं नाही</div>`}
+  </div>
+  ${failed.length? `<div class="section-title mr">Live Data न मिळालेले</div>${failed.map(s=>stockCardHTML(s)).join('')}` : ''}
+  `;
+}
+function onScannerSearch(v){ scannerSearchQuery = v; document.getElementById('main').innerHTML = renderScanner(); const inp=document.querySelector('#main .search-input'); if(inp){ inp.focus(); inp.selectionStart=inp.selectionEnd=inp.value.length; } }
+
+function renderWatchlist(){
+  const arr = STOCKS.filter(s=>watchlist.has(s.sym));
+  const usArr = Array.from(usWatchlist).map(sym=>usState.cache[sym]).filter(Boolean);
+  return `
+  <div class="section-title mr" style="margin-top:6px;">🇮🇳 भारत Watchlist <span class="count">${arr.length}</span></div>
+  ${arr.length? arr.map(s=>stockCardHTML(s)).join('') : `<div class="watch-empty"><span class="mr">वॉचलिस्ट रिकामी आहे</span>Scanner मधून ⭐ टॅप करून stocks add करा</div>`}
+
+  <div class="section-title mr">🇺🇸 USA Watchlist <span class="count">${usArr.length}</span></div>
+  ${usArr.length? usArr.map(e=>usStockCardHTML(e)).join('') : `<div class="watch-empty"><span class="mr">USA वॉचलिस्ट रिकामी आहे</span>USA टॅबमधून stock शोधून ⭐ add करा</div>`}
+  `;
+}
+
+function candleSVG(bars, e20, e50){
+  const n = bars.slice(-60);
+  const eA = e20.slice(-60), eB = e50.slice(-60);
+  const w=440, h=180, pad=6;
+  const allVals = n.flatMap(b=>[b.high,b.low]).concat(eA.filter(v=>v!=null)).concat(eB.filter(v=>v!=null));
+  const max = Math.max(...allVals), min = Math.min(...allVals);
+  const y = v => pad + (1-(v-min)/(max-min))*(h-2*pad);
+  const cw = w/n.length;
+  let candles = '';
+  n.forEach((b,i)=>{
+    const x = i*cw + cw/2;
+    const col = b.close>=b.open ? 'var(--bull)' : 'var(--bear)';
+    candles += `<line x1="${x}" y1="${y(b.high)}" x2="${x}" y2="${y(b.low)}" stroke="${col}" stroke-width="1"/>`;
+    const bodyTop = y(Math.max(b.open,b.close)), bodyBot = y(Math.min(b.open,b.close));
+    candles += `<rect x="${x-cw*0.32}" y="${bodyTop}" width="${cw*0.64}" height="${Math.max(1.2,bodyBot-bodyTop)}" fill="${col}"/>`;
+  });
+  function linePath(arr){
+    let d='';
+    arr.forEach((v,i)=>{ if(v==null) return; const x=i*cw+cw/2; d += (d?'L':'M')+x+','+y(v)+' '; });
+    return d;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+    ${candles}
+    <path d="${linePath(eA)}" stroke="var(--accent-gold)" stroke-width="1.4" fill="none" opacity="0.9"/>
+    <path d="${linePath(eB)}" stroke="var(--accent-teal)" stroke-width="1.4" fill="none" opacity="0.9"/>
+  </svg>`;
+}
+
+function renderDetail(sym){
+  const s = STOCKS.find(x=>x.sym===sym);
+  if(!s || !s.result || !s.bars || s.bars.length<30){
+    return `
+    <button class="backbtn" onclick="setView('${window.__lastList||'scanner'}')">← मागे</button>
+    <div class="error-screen" style="margin-top:20px;">
+      <div class="icon">⚠️</div>
+      <h3 class="mr">${sym} साठी Live Data उपलब्ध नाही</h3>
+      <p class="mr">${(s && s.error) || 'पुरेसा candle data मिळाला नाही.'}<br>कृपया Refresh करून पुन्हा प्रयत्न करा.</p>
+      <button class="retry-btn mr" onclick="manualRefresh()">Refresh करा</button>
+    </div>`;
+  }
+  const r = s.result;
+  const closes = s.bars.map(b=>b.close);
+  const e20 = ema(closes,20), e50 = ema(closes,50);
+  const isWatch = watchlist.has(sym);
+
+  const verdictHTML = r.verdict==='BUY_SETUP'
+    ? `<div class="verdict buy"><div class="vtitle">BUY SETUP – CONFIRMATION आवश्यक</div><div class="vsub">${r.confirmCount}/4 confirmations मिळाले. तरीही स्वतःचे risk management वापरा.</div></div>`
+    : `<div class="verdict notrade"><div class="vtitle">NO TRADE — Confirmation बाकी आहे</div><div class="vsub">फक्त ${r.confirmCount}/4 confirmations मिळाले. सध्या Trade करू नका.</div></div>`;
+
+  return `
+  <button class="backbtn" onclick="setView('${window.__lastList||'scanner'}')">← मागे</button>
+  <div class="detail-head">
+    <div>
+      <h2>${s.sym}</h2>
+      <div class="sec">${s.name} · ${s.sector}</div>
+    </div>
+    ${ringSVG(r.score, r.catKey, 52)}
+  </div>
+  <div class="detail-price mono">${inr(r.close)} <span class="chg ${r.changePct>=0?'up':'down'}" style="font-size:14px;">${r.changePct>=0?'▲':'▼'}${fmt(Math.abs(r.changePct),2)}%</span></div>
+  ${badgeHTML(r.catKey, r.category)}
+
+  ${verdictHTML}
+  <div class="confirm-list">
+    ${r.confirmations.map(c=>`<div class="confirm-item"><span class="dot ${c.ok?'yes':'no'}">${c.ok?'✓':'✕'}</span>${c.label}</div>`).join('')}
+  </div>
+
+  <div class="chartbox">
+    ${candleSVG(s.bars, e20, e50)}
+    <div class="legend">
+      <span><i style="background:var(--accent-gold)"></i>EMA 20</span>
+      <span><i style="background:var(--accent-teal)"></i>EMA 50</span>
+      <span><i style="background:var(--bull)"></i>Bullish candle</span>
+      <span><i style="background:var(--bear)"></i>Bearish candle</span>
+    </div>
+  </div>
+
+  <div class="statgrid">
+    <div class="stat"><div class="l">RSI 14</div><div class="v">${fmt(r.rsi,1)}</div></div>
+    <div class="stat"><div class="l">MACD</div><div class="v">${fmt(r.macd,2)}</div></div>
+    <div class="stat"><div class="l">EMA 20</div><div class="v">${inr(r.e20)}</div></div>
+    <div class="stat"><div class="l">EMA 50</div><div class="v">${inr(r.e50)}</div></div>
+    <div class="stat"><div class="l">EMA 200</div><div class="v">${r.e200?inr(r.e200):'-'}</div></div>
+    <div class="stat"><div class="l">VWAP (approx)</div><div class="v">${inr(r.vwap)}</div></div>
+    <div class="stat"><div class="l">ADX</div><div class="v">${fmt(r.adx,1)}</div></div>
+    <div class="stat"><div class="l">ATR</div><div class="v">${inr(r.atr)}</div></div>
+    <div class="stat"><div class="l">Volume</div><div class="v">${(r.volume/1e5).toFixed(1)}L</div></div>
+    <div class="stat"><div class="l">Avg Volume</div><div class="v">${(r.avgVol20/1e5).toFixed(1)}L</div></div>
+    <div class="stat"><div class="l">Support</div><div class="v">${inr(r.support)}</div></div>
+    <div class="stat"><div class="l">Resistance</div><div class="v">${inr(r.resistance)}</div></div>
+    <div class="stat"><div class="l">Prev Day High</div><div class="v">${inr(r.prevHigh)}</div></div>
+    <div class="stat"><div class="l">Prev Day Low</div><div class="v">${inr(r.prevLow)}</div></div>
+    <div class="stat"><div class="l">52W High</div><div class="v">${inr(r.high52)}</div></div>
+    <div class="stat"><div class="l">52W Low</div><div class="v">${inr(r.low52)}</div></div>
+  </div>
+
+  <div class="card-box">
+    <h3 class="mr">Entry / Stop Loss / Target</h3>
+    <div class="etr-row"><span class="l mr">Entry Zone</span><span class="v">${inr(r.entry)}</span></div>
+    <div class="etr-row"><span class="l mr">Stop Loss</span><span class="v r">${inr(r.sl)}</span></div>
+    <div class="etr-row"><span class="l mr">Risk / Share</span><span class="v">${inr(r.risk)}</span></div>
+    <div class="etr-row"><span class="l mr">Target 1 (1:2)</span><span class="v g">${inr(r.target1)}</span></div>
+    <div class="etr-row"><span class="l mr">Target 2</span><span class="v g">${inr(r.target2)}</span></div>
+    <div class="etr-row"><span class="l mr">Risk : Reward</span><span class="v">1 : ${fmt(r.rr,2)}</span></div>
+  </div>
+
+  <div class="section-title mr" style="margin-bottom:0;">का निवडला? (Score Breakdown)</div>
+  <div class="scorebreak">
+    ${r.items.map(it=>`
+      <div class="sb-row ${it.ok?'on':'off'}">
+        <span>${it.label}<br><span style="color:var(--text-dim2); font-size:10.5px;">${it.reason}</span></span>
+        <span class="pts">${it.ok?'+':''}${it.points}/${it.max}</span>
+      </div>`).join('')}
+    <div class="sb-row" style="background:var(--card2); font-weight:700;">
+      <span>Total Score</span><span class="pts" style="color:${scoreColor(r.catKey)}">${r.score}/100</span>
+    </div>
+  </div>
+
+  <div class="explain-box mr">${aiExplanation(s,r)}</div>
+
+  <button class="addwatch ${isWatch?'added':''}" onclick="toggleWatch('${sym}')">
+    ${isWatch? '⭐ वॉचलिस्ट मधून काढा' : '☆ वॉचलिस्ट मध्ये जोडा'}
+  </button>
+  <button class="btn-primary" style="margin-top:9px;" onclick="goToPaperTrade('${sym}')">📝 Paper Trade + Risk Calculator</button>
+  `;
+}
+function goToPaperTrade(sym){
+  window.__ptPreselect = 'IN:'+sym;
+  ptTab = 'trades';
+  setView('papertrade');
+}
+
+/* ============================= US MARKET UI ============================= */
+function usStockCardHTML(entry){
+  if(!entry || !entry.result){
+    return `
+    <div class="stock-card stale">
+      <div class="ring-wrap" style="width:44px;height:44px; display:flex; align-items:center; justify-content:center; color:var(--text-dim2); font-size:16px;">–</div>
+      <div class="mid">
+        <div class="sym">${entry?entry.symbol:'?'}</div>
+        <div class="no-data-tag mr">Data उपलब्ध नाही${entry&&entry.error?': '+entry.error:''}</div>
+      </div>
+    </div>`;
+  }
+  const r = entry.result;
+  return `
+  <div class="stock-card" onclick="openUSDetail('${entry.symbol}')">
+    ${ringSVG(r.score, r.catKey)}
+    <div class="mid">
+      <div class="sym">${entry.symbol} ${usWatchlist.has(entry.symbol)?'⭐':''}</div>
+      <div class="sec">US · ${r.trendLabel} · Daily</div>
+      <div class="metaRow">
+        <span>RSI ${fmt(r.rsi,0)}</span>
+        <span>Vol ${(r.volume/1e6).toFixed(2)}M</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="price">${usd(r.close)}</div>
+      <div class="chg ${r.changePct>=0?'up':'down'}">${r.changePct>=0?'▲':'▼'}${fmt(Math.abs(r.changePct),2)}%</div>
+      ${badgeHTML(r.catKey, r.category)}
+    </div>
+  </div>`;
+}
+
+let usSearchDebounce = null;
+function onUSSearchInput(v){
+  usState.searchQuery = v;
+  if(usSearchDebounce) clearTimeout(usSearchDebounce);
+  usSearchDebounce = setTimeout(async ()=>{
+    await searchUS(v);
+    if(appState.market==='US'){
+      document.getElementById('main').innerHTML = renderUSMarket();
+      const inp=document.querySelector('#main .search-input');
+      if(inp){ inp.focus(); inp.selectionStart=inp.selectionEnd=inp.value.length; }
+    }
+  }, 500);
+}
+
+function renderUSMarket(){
+  const st = usState.status;
+  const cls = st ? (st.is_open?'live':'closed') : 'closed';
+  const label = st ? (st.is_open?'Live':'Market Closed') : 'US Data Unavailable';
+  let html = `
+  <div class="status-bar-inner ${cls}" style="margin:10px 0 0;">
+    <div class="status-left"><span class="dotpulse"></span> 🇺🇸 US Market — ${label}</div>
+  </div>
+  <div class="us-note mr">
+    US स्टॉक्ससाठी फक्त Daily (EOD) data उपलब्ध आहे — intraday नाही. मोफत plan मध्ये दरमहा मर्यादित lookups असल्यामुळे स्टॉक्स आपोआप स्कॅन होत नाहीत — शोधून किंवा खालच्या यादीतून टॅप करून उघडा.
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" placeholder="US stock शोधा — उदा. AAPL, TSLA, MSFT" value="${usState.searchQuery||''}" oninput="onUSSearchInput(this.value)">
+  </div>
+  `;
+  if(usState.searchQuery && usState.searchQuery.trim()){
+    html += `<div class="search-results">`;
+    if(usState.searching) html += `<div class="watch-empty mr">शोधत आहे...</div>`;
+    else if(!usState.searchResults.length) html += `<div class="watch-empty mr">काहीही सापडलं नाही</div>`;
+    else html += usState.searchResults.map(r=>`
+      <div class="us-popular-card" onclick="openUSDetail('${r.sym}')">
+        <div><div class="sym">${r.sym}</div><div class="nm">${r.name||''}${r.exchange?(' · '+r.exchange):''}</div></div>
+        <div class="arrow">›</div>
+      </div>`).join('');
+    html += `</div>`;
+  } else {
+    html += `<div class="section-title mr" style="margin-bottom:6px;">लोकप्रिय US Stocks</div>`;
+    html += usState.popular.map(s=>`
+      <div class="us-popular-card" onclick="openUSDetail('${s.sym}')">
+        <div><div class="sym">${s.sym}</div><div class="nm">${s.name} · ${s.sector}</div></div>
+        <div class="arrow">›</div>
+      </div>`).join('');
+  }
+  html += `<div class="disclaimer mr">हा application शैक्षणिक आणि analysis साठी आहे. कोणताही signal नफा निश्चित करत नाही. प्रत्येक trade मध्ये capital risk असतो.</div>`;
+  return html;
+}
+
+async function openUSDetail(sym){
+  window.__lastList = currentView;
+  currentSymbol = sym;
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('main').innerHTML = loadingScreenHTML(sym+' चा data आणत आहे...');
+  try{
+    const entry = await getUSStock(sym);
+    document.getElementById('main').innerHTML = renderUSDetail(entry);
+  }catch(e){
+    document.getElementById('main').innerHTML = `
+    <button class="backbtn" onclick="setView('${window.__lastList||'home'}')">← मागे</button>
+    <div class="error-screen" style="margin-top:20px;">
+      <div class="icon">⚠️</div>
+      <h3 class="mr">${sym} साठी data मिळाला नाही</h3>
+      <p class="mr">${(e&&e.message)||'US market data मिळत नाही.'}</p>
+      <button class="retry-btn mr" onclick="openUSDetail('${sym}')">पुन्हा प्रयत्न करा</button>
+    </div>`;
+  }
+}
+
+function renderUSDetail(entry){
+  const sym = entry.symbol;
+  if(!entry.result){
+    return `
+    <button class="backbtn" onclick="setView('${window.__lastList||'home'}')">← मागे</button>
+    <div class="error-screen" style="margin-top:20px;">
+      <div class="icon">⚠️</div>
+      <h3 class="mr">${sym} साठी विश्लेषण शक्य नाही</h3>
+      <p class="mr">${entry.error||'पुरेसा historical data उपलब्ध नाही.'}</p>
+    </div>`;
+  }
+  const r = entry.result;
+  const closes = entry.bars.map(b=>b.close);
+  const e20 = ema(closes,20), e50 = ema(closes,50);
+  const isWatch = usWatchlist.has(sym);
+
+  const verdictHTML = r.verdict==='BUY_SETUP'
+    ? `<div class="verdict buy"><div class="vtitle">BUY SETUP – CONFIRMATION आवश्यक</div><div class="vsub">${r.confirmCount}/4 confirmations मिळाले. तरीही स्वतःचे risk management वापरा.</div></div>`
+    : `<div class="verdict notrade"><div class="vtitle">NO TRADE — Confirmation बाकी आहे</div><div class="vsub">फक्त ${r.confirmCount}/4 confirmations मिळाले. सध्या Trade करू नका.</div></div>`;
+
+  return `
+  <button class="backbtn" onclick="setView('${window.__lastList||'home'}')">← मागे</button>
+  <div class="detail-head">
+    <div>
+      <h2>${sym}</h2>
+      <div class="sec">US Stock · Daily (EOD) data</div>
+    </div>
+    ${ringSVG(r.score, r.catKey, 52)}
+  </div>
+  <div class="detail-price mono">${usd(r.close)} <span class="chg ${r.changePct>=0?'up':'down'}" style="font-size:14px;">${r.changePct>=0?'▲':'▼'}${fmt(Math.abs(r.changePct),2)}%</span></div>
+  ${badgeHTML(r.catKey, r.category)}
+
+  ${verdictHTML}
+  <div class="confirm-list">
+    ${r.confirmations.map(c=>`<div class="confirm-item"><span class="dot ${c.ok?'yes':'no'}">${c.ok?'✓':'✕'}</span>${c.label}</div>`).join('')}
+  </div>
+
+  <div class="chartbox">
+    ${candleSVG(entry.bars, e20, e50)}
+    <div class="legend">
+      <span><i style="background:var(--accent-gold)"></i>EMA 20</span>
+      <span><i style="background:var(--accent-teal)"></i>EMA 50</span>
+      <span><i style="background:var(--bull)"></i>Bullish candle</span>
+      <span><i style="background:var(--bear)"></i>Bearish candle</span>
+    </div>
+  </div>
+
+  <div class="statgrid">
+    <div class="stat"><div class="l">RSI 14</div><div class="v">${fmt(r.rsi,1)}</div></div>
+    <div class="stat"><div class="l">MACD</div><div class="v">${fmt(r.macd,2)}</div></div>
+    <div class="stat"><div class="l">EMA 20</div><div class="v">${usd(r.e20)}</div></div>
+    <div class="stat"><div class="l">EMA 50</div><div class="v">${usd(r.e50)}</div></div>
+    <div class="stat"><div class="l">EMA 200</div><div class="v">${r.e200?usd(r.e200):'-'}</div></div>
+    <div class="stat"><div class="l">VWAP (approx)</div><div class="v">${usd(r.vwap)}</div></div>
+    <div class="stat"><div class="l">ADX</div><div class="v">${fmt(r.adx,1)}</div></div>
+    <div class="stat"><div class="l">ATR</div><div class="v">${usd(r.atr)}</div></div>
+    <div class="stat"><div class="l">Volume</div><div class="v">${(r.volume/1e6).toFixed(2)}M</div></div>
+    <div class="stat"><div class="l">Avg Volume</div><div class="v">${(r.avgVol20/1e6).toFixed(2)}M</div></div>
+    <div class="stat"><div class="l">Support</div><div class="v">${usd(r.support)}</div></div>
+    <div class="stat"><div class="l">Resistance</div><div class="v">${usd(r.resistance)}</div></div>
+    <div class="stat"><div class="l">Prev Day High</div><div class="v">${usd(r.prevHigh)}</div></div>
+    <div class="stat"><div class="l">Prev Day Low</div><div class="v">${usd(r.prevLow)}</div></div>
+    <div class="stat"><div class="l">52W High</div><div class="v">${usd(r.high52)}</div></div>
+    <div class="stat"><div class="l">52W Low</div><div class="v">${usd(r.low52)}</div></div>
+  </div>
+
+  <div class="card-box">
+    <h3 class="mr">Entry / Stop Loss / Target</h3>
+    <div class="etr-row"><span class="l mr">Entry Zone</span><span class="v">${usd(r.entry)}</span></div>
+    <div class="etr-row"><span class="l mr">Stop Loss</span><span class="v r">${usd(r.sl)}</span></div>
+    <div class="etr-row"><span class="l mr">Risk / Share</span><span class="v">${usd(r.risk)}</span></div>
+    <div class="etr-row"><span class="l mr">Target 1 (1:2)</span><span class="v g">${usd(r.target1)}</span></div>
+    <div class="etr-row"><span class="l mr">Target 2</span><span class="v g">${usd(r.target2)}</span></div>
+    <div class="etr-row"><span class="l mr">Risk : Reward</span><span class="v">1 : ${fmt(r.rr,2)}</span></div>
+  </div>
+
+  <div class="section-title mr" style="margin-bottom:0;">का निवडला? (Score Breakdown)</div>
+  <div class="scorebreak">
+    ${r.items.map(it=>`
+      <div class="sb-row ${it.ok?'on':'off'}">
+        <span>${it.label}<br><span style="color:var(--text-dim2); font-size:10.5px;">${it.reason}</span></span>
+        <span class="pts">${it.ok?'+':''}${it.points}/${it.max}</span>
+      </div>`).join('')}
+    <div class="sb-row" style="background:var(--card2); font-weight:700;">
+      <span>Total Score</span><span class="pts" style="color:${scoreColor(r.catKey)}">${r.score}/100</span>
+    </div>
+  </div>
+
+  <div class="explain-box mr">${aiExplanation(entry,r)}</div>
+
+  <button class="addwatch ${isWatch?'added':''}" onclick="toggleUSWatch('${sym}')">
+    ${isWatch? '⭐ वॉचलिस्ट मधून काढा' : '☆ वॉचलिस्ट मध्ये जोडा'}
+  </button>
+  <button class="btn-primary" style="margin-top:9px;" onclick="goToPaperTradeUS('${sym}')">📝 Paper Trade + Risk Calculator</button>
+  `;
+}
+function toggleUSWatch(sym){
+  if(usWatchlist.has(sym)) usWatchlist.delete(sym); else usWatchlist.add(sym);
+  document.getElementById('main').innerHTML = renderUSDetail(usState.cache[sym]);
+}
+function goToPaperTradeUS(sym){
+  window.__ptPreselect = 'US:'+sym;
+  ptTab = 'trades';
+  setView('papertrade');
+}
+
+/* ============================= MARKET TOGGLE + PWA INSTALL ============================= */
+function renderMarketBar(){
+  const el = document.getElementById('market-bar');
+  if(!el) return;
+  el.innerHTML = `
+  <div class="market-toggle">
+    <button class="${appState.market==='IN'?'active':''}" onclick="setMarket('IN')">🇮🇳 India</button>
+    <button class="${appState.market==='US'?'active':''}" onclick="setMarket('US')">🇺🇸 USA</button>
+  </div>`;
+}
+
+async function setMarket(m){
+  appState.market = m;
+  renderMarketBar();
+  if(m==='US'){
+    if(!usState.status){
+      document.getElementById('main').innerHTML = loadingScreenHTML('US Market data आणत आहे...');
+      await fetchUSStatus();
+      await fetchUSPopular();
+    }
+    document.getElementById('main').innerHTML = renderUSMarket();
+    document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.view==='home'));
+    currentView = 'home';
+  } else {
+    setView(currentView==='papertrade' || currentView==='watchlist' ? currentView : 'home');
+  }
+}
+
+// --- PWA install prompt ---
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallBanner();
+});
+function showInstallBanner(){
+  if(document.getElementById('install-banner') || !deferredInstallPrompt) return;
+  const bar = document.createElement('div');
+  bar.id = 'install-banner';
+  bar.className = 'install-banner';
+  bar.innerHTML = `<span class="mr">📲 हे app फोनवर install करा</span><div style="display:flex; align-items:center; gap:8px;"><button class="mr" onclick="doInstall()">Install</button><span class="install-dismiss" onclick="document.getElementById('install-banner').remove()">✕</span></div>`;
+  document.body.insertBefore(bar, document.getElementById('app'));
+}
+async function doInstall(){
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  const b = document.getElementById('install-banner'); if(b) b.remove();
+}
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
+  });
+}
+
+function aiExplanation(s,r){
+  const trendTxt = r.trendLabel==='Bullish'
+    ? `हा stock सध्या <b>bullish trend</b> मध्ये आहे कारण price EMA 20, EMA 50 आणि EMA 200 च्या वर आहे.`
+    : (r.trendLabel==='Bearish'
+      ? `हा stock सध्या <b>bearish trend</b> मध्ये आहे कारण EMA रांग खालच्या दिशेने आहे — यात Long setup साठी confirmation कमी आहे.`
+      : `हा stock सध्या <b>sideways / संमिश्र</b> स्थितीत आहे, स्पष्ट trend दिसत नाही.`);
+  const rsiTxt = r.rsi>=50 && r.rsi<=65
+    ? `RSI ${fmt(r.rsi,0)} असल्यामुळे momentum positive आहे पण अत्यंत overbought नाही.`
+    : (r.rsi>65 ? `RSI ${fmt(r.rsi,0)} असल्यामुळे stock overbought झोन मध्ये आहे — सावधगिरी बाळगा.`
+               : `RSI ${fmt(r.rsi,0)} अजून momentum-confirmation zone (50-65) मध्ये पोहोचलेला नाही.`);
+  const volTxt = r.volume > 1.5*r.avgVol20
+    ? `आजचे volume average पेक्षा जास्त आहे, जे move ला support करते.`
+    : `आजचे volume average च्या जवळपास/कमी आहे — मजबूत confirmation साठी अजून volume हवे.`;
+  const breakoutTxt = r.close > r.resistance*0.998
+    ? `Resistance breakout झाल्यामुळे setup मजबूत झाला आहे.`
+    : `किंमत अजून resistance (${inr(r.resistance)}) खाली आहे — breakout ची वाट पहा.`;
+  return `${trendTxt}<br>${rsiTxt}<br>${volTxt}<br>${breakoutTxt}<br><b>मात्र Stop Loss शिवाय trade करू नका.</b>`;
+}
+
+/* ============================= PAPER TRADE + RISK CALC UI ============================= */
+// pt-symbol values are prefixed "IN:SYM" or "US:SYM" to disambiguate markets.
+function resolvePTValue(value){
+  if(!value) return null;
+  const [market, sym] = value.split(':');
+  if(market==='US'){
+    const entry = usState.cache[sym];
+    return entry && entry.result ? {market:'US', sym, result:entry.result} : null;
+  }
+  const s = STOCKS.find(x=>x.sym===sym);
+  return s && s.result ? {market:'IN', sym, result:s.result} : null;
+}
+function fmtMoney(n, market){ return market==='US' ? usd(n) : inr(n); }
+
+function updatePTPreview(){
+  const symEl = document.getElementById('pt-symbol');
+  if(!symEl) return;
+  const resolved = resolvePTValue(symEl.value);
+  if(!resolved) return;
+  const {market, result} = resolved;
+  const capital = parseFloat(document.getElementById('pt-capital').value)||0;
+  const riskPct = parseFloat(document.getElementById('pt-riskpct').value)||0;
+  const entry = result.entry, sl = result.sl;
+  const {riskRupees, qty, positionValue} = calcRisk(capital, riskPct, entry, sl);
+  document.getElementById('pt-entry-display').textContent = fmtMoney(entry, market);
+  document.getElementById('pt-sl-display').textContent = fmtMoney(sl, market);
+  document.getElementById('pt-target-display').textContent = fmtMoney(result.target1, market);
+  document.getElementById('pt-riskrupees').textContent = fmtMoney(riskRupees, market);
+  document.getElementById('pt-qty').textContent = qty + ' shares';
+  document.getElementById('pt-posvalue').textContent = fmtMoney(positionValue, market);
+}
+function takePaperTrade(){
+  const symEl = document.getElementById('pt-symbol');
+  if(!symEl) return;
+  const value = symEl.value;
+  const resolved = resolvePTValue(value);
+  if(!resolved){ alert('या stock साठी data उपलब्ध नाही.'); return; }
+  const {market, sym, result} = resolved;
+  const capital = parseFloat(document.getElementById('pt-capital').value)||0;
+  const riskPct = parseFloat(document.getElementById('pt-riskpct').value)||0;
+  const entry = result.entry, sl = result.sl, target1 = result.target1, target2 = result.target2;
+  const {riskRupees, qty, positionValue} = calcRisk(capital, riskPct, entry, sl);
+  if(qty<=0){ alert('Quantity 0 आहे — Capital किंवा Risk % वाढवा.'); return; }
+  paperTrades.unshift({
+    id: tradeIdCounter++, symbol: sym, market, entry, sl, target1, target2, qty, capital, riskPct, riskRupees, positionValue,
+    status:'open', exitPrice:null, pnl:null, pnlPct:null, openedAt: new Date().toLocaleDateString('en-IN')
+  });
+  window.__ptPreselect = value;
+  document.getElementById('main').innerHTML = renderPaperTrade();
+  updatePTPreview();
+}
+function closeTrade(id, mode){
+  const t = paperTrades.find(x=>x.id===id);
+  if(!t) return;
+  let exitPrice;
+  if(mode==='target') exitPrice = t.target1;
+  else if(mode==='sl') exitPrice = t.sl;
+  else {
+    const inp = document.getElementById('exit-manual-'+id);
+    exitPrice = parseFloat(inp.value);
+    if(!exitPrice || exitPrice<=0){ alert('योग्य Exit price टाका.'); return; }
+  }
+  t.exitPrice = exitPrice;
+  t.pnl = (exitPrice - t.entry) * t.qty;
+  t.pnlPct = (exitPrice - t.entry)/t.entry*100;
+  t.status = 'closed';
+  document.getElementById('main').innerHTML = renderPaperTrade();
+  if(ptTab==='trades') updatePTPreview();
+}
+function setPtTab(tab){ ptTab = tab; document.getElementById('main').innerHTML = renderPaperTrade(); if(tab==='trades') updatePTPreview(); }
+function runBacktest(){
+  // Backtesting currently supports India (Upstox) symbols only — it needs
+  // deep multi-year history that the US free-tier quota can't sustain.
+  btSymbol = document.getElementById('bt-symbol').value;
+  btThreshold = parseFloat(document.getElementById('bt-threshold').value)||75;
+  const s = STOCKS.find(x=>x.sym===btSymbol);
+  btResult = backtestStock(s, btThreshold);
+  document.getElementById('main').innerHTML = renderPaperTrade();
+}
+
+function renderPaperTrade(){
+  const tradableIN = STOCKS.filter(s=>s.result).map(s=>({value:'IN:'+s.sym, label:'🇮🇳 '+s.sym+' — '+s.result.category}));
+  const tradableUS = Array.from(usWatchlist).map(sym=>usState.cache[sym]).filter(e=>e && e.result)
+    .map(e=>({value:'US:'+e.symbol, label:'🇺🇸 '+e.symbol+' — '+e.result.category}));
+  const tradable = tradableIN.concat(tradableUS);
+  const preselect = window.__ptPreselect || (tradable[0] ? tradable[0].value : null);
+  window.__ptPreselect = null;
+  const open = paperTrades.filter(t=>t.status==='open');
+  const closed = paperTrades.filter(t=>t.status==='closed');
+  const closedIN = closed.filter(t=>t.market!=='US');
+  const closedUS = closed.filter(t=>t.market==='US');
+  const wins = closed.filter(t=>t.pnl>0);
+  const closedWinRate = closed.length? (wins.length/closed.length*100):0;
+  const totalPnlIN = closedIN.reduce((a,t)=>a+t.pnl,0);
+  const totalPnlUS = closedUS.reduce((a,t)=>a+t.pnl,0);
+
+  let html = `
+  <div class="section-title mr" style="margin-top:6px;">Paper Trading</div>
+  <div class="subtabs">
+    <div class="subtab ${ptTab==='trades'?'active':''}" onclick="setPtTab('trades')">ट्रेड्स व Risk Calculator</div>
+    <div class="subtab ${ptTab==='backtest'?'active':''}" onclick="setPtTab('backtest')">Backtest</div>
+  </div>`;
+
+  if(!tradable.length){
+    html += `<div class="watch-empty mr">सध्या कोणत्याही stock साठी live data उपलब्ध नाही — Paper Trade/Backtest साठी आधी data load होणे आवश्यक आहे (India: Scanner उघडा, USA: एखादा stock शोधून उघडा).</div>`;
+    return html;
+  }
+
+  if(ptTab==='trades'){
+    html += `
+    <div class="card-box">
+      <h3 class="mr">Risk Calculator + नवीन Paper Trade</h3>
+      <div class="field">
+        <label class="mr">Stock निवडा</label>
+        <select id="pt-symbol" onchange="updatePTPreview()">
+          ${tradable.map(t=>`<option value="${t.value}" ${t.value===preselect?'selected':''}>${t.label}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label class="mr">Capital</label><input type="number" id="pt-capital" value="100000" oninput="updatePTPreview()"></div>
+        <div class="field"><label class="mr">Max Risk / Trade (%)</label><input type="number" id="pt-riskpct" value="1" step="0.5" oninput="updatePTPreview()"></div>
+      </div>
+      <div class="risk-preview">
+        <div class="rp-row"><span class="mr">Entry Zone</span><span class="v" id="pt-entry-display">-</span></div>
+        <div class="rp-row"><span class="mr">Stop Loss</span><span class="v" id="pt-sl-display" style="color:var(--bear)">-</span></div>
+        <div class="rp-row"><span class="mr">Target 1</span><span class="v" id="pt-target-display" style="color:var(--bull)">-</span></div>
+        <div class="rp-row"><span class="mr">Maximum Risk</span><span class="v" id="pt-riskrupees">-</span></div>
+        <div class="rp-row hi"><span class="mr">Quantity</span><span class="v" id="pt-qty">-</span></div>
+        <div class="rp-row"><span class="mr">Position Value</span><span class="v" id="pt-posvalue">-</span></div>
+      </div>
+      <button class="btn-primary" onclick="takePaperTrade()">Paper Trade घ्या (Virtual)</button>
+    </div>
+
+    <div class="section-title mr">Open Positions <span class="count">${open.length}</span></div>
+    ${open.length? open.map(t=>tradeCardHTML(t)).join('') : `<div class="watch-empty mr">सध्या कोणतीही open position नाही</div>`}
+
+    <div class="section-title mr">Performance Summary</div>
+    <div class="summary-row">
+      <div class="summary-box"><div class="n">${closed.length}</div><div class="l mr">बंद Trades</div></div>
+      <div class="summary-box"><div class="n" style="color:var(--bull)">${fmt(closedWinRate,0)}%</div><div class="l mr">Win Rate</div></div>
+      <div class="summary-box"><div class="n" style="color:${totalPnlIN>=0?'var(--bull)':'var(--bear)'}">${totalPnlIN>=0?'+':''}${inr(totalPnlIN)}</div><div class="l mr">🇮🇳 P/L</div></div>
+      <div class="summary-box"><div class="n" style="color:${totalPnlUS>=0?'var(--bull)':'var(--bear)'}">${totalPnlUS>=0?'+':''}${usd(totalPnlUS)}</div><div class="l mr">🇺🇸 P/L</div></div>
+    </div>
+
+    <div class="section-title mr">Closed Trades</div>
+    ${closed.length? closed.slice(0,10).map(t=>tradeCardHTML(t)).join('') : `<div class="watch-empty mr">अजून कोणताही trade बंद झालेला नाही</div>`}
+    `;
+  } else {
+    if(!tradable.find(s=>s.sym===btSymbol)) btSymbol = tradable[0].sym;
+    html += `
+    <div class="card-box">
+      <h3 class="mr">Strategy Backtest</h3>
+      <div class="field">
+        <label class="mr">Stock निवडा</label>
+        <select id="bt-symbol">${tradable.map(s=>`<option value="${s.sym}" ${s.sym===btSymbol?'selected':''}>${s.sym}</option>`).join('')}</select>
+      </div>
+      <div class="field">
+        <label class="mr">Score Threshold (entry साठी किमान score)</label>
+        <input type="number" id="bt-threshold" value="${btThreshold}" min="40" max="100">
+      </div>
+      <button class="btn-primary" onclick="runBacktest()">Backtest चालवा</button>
+    </div>
+    <div class="overfit-warn mr">
+      ⚠️ <b>Overfitting Warning:</b> हे results उपलब्ध historical data वर आधारित आहेत (Live mode मध्ये निवडलेल्या timeframe नुसार, Demo mode मध्ये generated data वर).
+      कोणतीही strategy एका historical period साठी चांगली दिसली तरी भविष्यात तशीच काम करेल याची खात्री नाही.
+      Live capital वापरण्यापूर्वी वेगवेगळ्या काळात आणि वेगवेगळ्या stocks वर test करा.
+    </div>
+    `;
+    if(btResult){
+      const r = btResult;
+      html += `
+      <div class="bt-statgrid">
+        <div class="bt-stat"><div class="l">Total Trades</div><div class="v">${r.total}</div></div>
+        <div class="bt-stat"><div class="l">Win Rate</div><div class="v g">${fmt(r.winRate,1)}%</div></div>
+        <div class="bt-stat"><div class="l">Winning Trades</div><div class="v g">${r.wins}</div></div>
+        <div class="bt-stat"><div class="l">Losing Trades</div><div class="v r">${r.losses}</div></div>
+        <div class="bt-stat"><div class="l">Avg Profit</div><div class="v g">+${fmt(r.avgProfit,2)}%</div></div>
+        <div class="bt-stat"><div class="l">Avg Loss</div><div class="v r">-${fmt(r.avgLoss,2)}%</div></div>
+        <div class="bt-stat"><div class="l">Max Drawdown</div><div class="v r">-${fmt(r.maxDD,2)}%</div></div>
+        <div class="bt-stat"><div class="l">Profit Factor</div><div class="v">${r.profitFactor===Infinity?'∞':fmt(r.profitFactor,2)}</div></div>
+        <div class="bt-stat"><div class="l">Avg Risk/Reward</div><div class="v">${r.avgRR? '1 : '+fmt(r.avgRR,2) : '-'}</div></div>
+        <div class="bt-stat"><div class="l">Net Return</div><div class="v ${r.netReturn>=0?'g':'r'}">${r.netReturn>=0?'+':''}${fmt(r.netReturn,2)}%</div></div>
+      </div>
+      <div class="section-title mr">अलीकडचे Trades (${btSymbol})</div>
+      ${r.trades.length===0? `<div class="watch-empty mr">या threshold वर कोणताही trade generate झाला नाही — threshold कमी करून पहा.</div>` :
+        r.trades.slice(-8).reverse().map(t=>`
+        <div class="trade-card">
+          <div class="th">
+            <span class="sym">${btSymbol}</span>
+            <span class="trade-status ${t.win?'win':'loss'}">${t.win?'WIN':'LOSS'} (${t.outcome==='target'?'Target Hit':t.outcome==='sl'?'SL Hit':'Time Exit'})</span>
+          </div>
+          <div class="trade-grid">
+            <div><div class="tl">Entry</div><div class="tv">${inr(t.entry)}</div></div>
+            <div><div class="tl">Exit</div><div class="tv">${inr(t.exitPrice)}</div></div>
+            <div><div class="tl">P/L %</div><div class="tv" style="color:${t.win?'var(--bull)':'var(--bear)'}">${t.pnlPct>=0?'+':''}${fmt(t.pnlPct,2)}%</div></div>
+          </div>
+        </div>`).join('')}
+      `;
+    }
+  }
+  return html;
+}
+
+function tradeCardHTML(t){
+  const statusLabel = t.status==='open' ? 'OPEN' : (t.pnl>=0?'WIN':'LOSS');
+  const statusClass = t.status==='open' ? 'open' : (t.pnl>=0?'win':'loss');
+  const flag = t.market==='US' ? '🇺🇸' : '🇮🇳';
+  const fm = (n) => fmtMoney(n, t.market);
+  return `
+  <div class="trade-card">
+    <div class="th">
+      <span class="sym">${flag} ${t.symbol}</span>
+      <span class="trade-status ${statusClass}">${statusLabel}</span>
+    </div>
+    <div class="trade-grid">
+      <div><div class="tl">Entry</div><div class="tv">${fm(t.entry)}</div></div>
+      <div><div class="tl">SL</div><div class="tv" style="color:var(--bear)">${fm(t.sl)}</div></div>
+      <div><div class="tl">Target 1</div><div class="tv" style="color:var(--bull)">${fm(t.target1)}</div></div>
+      <div><div class="tl">Qty</div><div class="tv">${t.qty}</div></div>
+      <div><div class="tl">Position</div><div class="tv">${fm(t.positionValue)}</div></div>
+      <div><div class="tl">${t.status==='open'?'Risk':'P/L'}</div><div class="tv" style="color:${t.status==='open'?'var(--text-dim)':(t.pnl>=0?'var(--bull)':'var(--bear)')}">${t.status==='open'? fm(t.riskRupees) : (t.pnl>=0?'+':'')+fm(t.pnl)}</div></div>
+    </div>
+    ${t.status==='open' ? `
+    <div class="trade-actions">
+      <button class="win-btn" onclick="closeTrade(${t.id},'target')">Target Hit</button>
+      <button class="loss-btn" onclick="closeTrade(${t.id},'sl')">SL Hit</button>
+    </div>
+    <div class="field-row" style="margin-top:8px;">
+      <div class="field" style="margin-bottom:0;"><input type="number" id="exit-manual-${t.id}" placeholder="Manual exit price"></div>
+      <button class="btn-outline" style="width:auto; padding:0 14px; margin-top:0;" onclick="closeTrade(${t.id},'manual')">Exit</button>
+    </div>` : `<div style="font-size:10.5px; color:var(--text-dim2); margin-top:8px;">Exit: ${fm(t.exitPrice)} · ${t.openedAt}</div>`}
+  </div>`;
+}
+
+/* ============================= NAV / EVENTS ============================= */
+function setView(v){
+  currentView = v; currentSymbol = null;
+  document.querySelectorAll('.navbtn').forEach(b=> b.classList.toggle('active', b.dataset.view===v));
+  const main = document.getElementById('main');
+  if(appState.market==='US' && (v==='home' || v==='scanner')){
+    main.innerHTML = renderUSMarket();
+  }
+  else if(v==='home') main.innerHTML = renderHome();
+  else if(v==='scanner') main.innerHTML = renderScanner();
+  else if(v==='watchlist') main.innerHTML = renderWatchlist();
+  else if(v==='papertrade'){ main.innerHTML = renderPaperTrade(); if(ptTab==='trades' && document.getElementById('pt-symbol')) updatePTPreview(); }
+  renderMarketBar();
+  window.scrollTo(0,0);
+}
+function setFilter(f){ scannerFilter=f; document.getElementById('main').innerHTML = renderScanner(); }
+function openDetail(sym){
+  window.__lastList = currentView==='home'?'home':currentView;
+  currentSymbol = sym;
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('main').innerHTML = renderDetail(sym);
+  window.scrollTo(0,0);
+}
+function toggleWatch(sym){
+  if(watchlist.has(sym)) watchlist.delete(sym); else watchlist.add(sym);
+  document.getElementById('main').innerHTML = renderDetail(sym);
+}
+document.querySelectorAll('.navbtn').forEach(b=> b.addEventListener('click', ()=> setView(b.dataset.view)));
+
+init();
+</script>
+</body>
+</html>
